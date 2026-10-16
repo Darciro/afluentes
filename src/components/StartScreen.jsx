@@ -1,7 +1,7 @@
 import { useFocusOnChange } from "../hooks/useFocusOnChange";
 import { CTA, GROW, SCREEN, STACK } from "../styles/classes";
 
-export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart }) {
+export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart, soundToggle }) {
   const headingRef = useFocusOnChange();
 
   return (
@@ -21,6 +21,7 @@ export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart }) {
         aria-hidden="true"
       />
       <div className={STACK}>
+        <div className="flex w-full items-center justify-end">{soundToggle}</div>
         <img className="mt-5 h-auto w-[min(280px,72%)]" src={logoSrc} alt="Afluentes" fetchPriority="high" />
         <div className={GROW} />
         <h1

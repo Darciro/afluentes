@@ -12,7 +12,7 @@ function optionState(i, picked, correct) {
   return i === picked ? "wrong" : "muted";
 }
 
-export default function QuestionScreen({ questions, index, question, picked, onChoose, onNext, soundToggle }) {
+export default function QuestionScreen({ questions, index, question, picked, logoSrc, onChoose, onNext, soundToggle }) {
   const headingRef = useFocusOnChange(index);
   const total = questions.length;
   const revealed = picked !== null;
@@ -22,6 +22,7 @@ export default function QuestionScreen({ questions, index, question, picked, onC
     <section className={`${SCREEN} bg-gq-cream`} aria-labelledby="gq-q-title">
       <SideBorder />
       <div className="flex min-w-0 flex-auto flex-col gap-5 px-5 pt-5 pb-[max(28px,env(safe-area-inset-bottom))]">
+        <img className="-mb-1.5 block h-auto w-[170px]" src={logoSrc} alt="Afluentes" />
         <div className="flex w-full items-center justify-between">
           <span className="text-sm font-semibold text-gq-blue">
             Pergunta {index + 1} de {total}

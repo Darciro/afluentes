@@ -34,7 +34,13 @@ export default function App({
   return (
     <div className="flex min-h-dvh justify-center bg-gq-night font-body text-gq-ink [-webkit-tap-highlight-color:transparent] min-[481px]:items-center min-[481px]:py-6">
       {quiz.phase === "start" && (
-        <StartScreen videoSrc={videoSrc} posterSrc={posterSrc} logoSrc={logoSrc} onStart={start} />
+        <StartScreen
+          videoSrc={videoSrc}
+          posterSrc={posterSrc}
+          logoSrc={logoSrc}
+          onStart={start}
+          soundToggle={<SoundToggle on={sound} onToggle={toggleSound} dark />}
+        />
       )}
 
       {quiz.phase === "question" && quiz.question && (
@@ -43,6 +49,7 @@ export default function App({
           index={quiz.index}
           question={quiz.question}
           picked={quiz.picked}
+          logoSrc={logoSrc}
           onChoose={quiz.choose}
           onNext={quiz.next}
           soundToggle={<SoundToggle on={sound} onToggle={toggleSound} />}
