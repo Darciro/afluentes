@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Qualquer visitante pode criar e finalizar a própria partida, mas ninguém lê,
+// apaga ou reescreve dados pelo app. Os dados são consultados só pelo console do Firebase.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /plays/{playId} {
+      allow read, delete: if false;
+
+      allow create: if playId.size() == 36
+        && request.resource.data.keys().hasOnly(['deviceId', 'total', 'userAgent', 'startedAt'])
+        && request.resource.data.deviceId is string
+        && request.resource.data.deviceId.size() == 36
+        && request.resource.data.total is int
+        && request.resource.data.total > 0
+        && request.resource.data.total <= 50
+        && request.resource.data.userAgent is string
+        && request.resource.data.userAgent.size() <= 512
+        && request.resource.data.startedAt == request.time;
+
+      // Finaliza uma única vez, sem mexer nos dados de início
+      allow update: if !('finishedAt' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['finishedAt', 'durationMs', 'score', 'answers'])
+        && request.resource.data.finishedAt == request.time
+        && request.resource.data.durationMs is int
+        && request.resource.data.durationMs >= 0
+        && request.resource.data.answers is list
+        && request.resource.data.answers.size() <= resource.data.total
+        && request.resource.data.score is int
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= request.resource.data.answers.size();
+    }
+  }
+}

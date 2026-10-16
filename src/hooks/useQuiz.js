@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { GUARDIAN_SCORE } from "../data/questions";
+import { trackFinish, trackStart } from "../lib/tracking";
 
 const preload = (question) =>
   question?.options.forEach((o) => {
@@ -27,6 +28,7 @@ export function useQuiz(questions, sfx) {
     setPicked(null);
     setAnswers([]);
     setPhase("question");
+    trackStart(questions.length);
   };
 
   const choose = (i) => {
@@ -49,6 +51,7 @@ export function useQuiz(questions, sfx) {
       return;
     }
     setPhase("result");
+    trackFinish(answers);
     if (score >= GUARDIAN_SCORE) sfx.fanfare();
   };
 
