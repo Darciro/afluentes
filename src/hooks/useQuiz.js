@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GUARDIAN_SCORE } from "../data/questions";
-import { trackFinish, trackStart } from "../lib/tracking";
+import { trackAnswer, trackFinish, trackStart } from "../lib/tracking";
 
 const preload = (question) =>
   question?.options.forEach((o) => {
@@ -34,8 +34,10 @@ export function useQuiz(questions, sfx) {
   const choose = (i) => {
     if (picked !== null) return;
     const ok = i === question.correct;
+    const nextAnswers = [...answers, ok];
     setPicked(i);
-    setAnswers((a) => [...a, ok]);
+    setAnswers(nextAnswers);
+    trackAnswer(nextAnswers);
     if (ok) {
       sfx.correct();
     } else {

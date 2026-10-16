@@ -1,16 +1,101 @@
-# React + Vite
+# Afluentes — Guardião da Amazônia
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Quiz em React + Vite para totens e celulares: o visitante responde 10 perguntas com fotos e, conforme a pontuação, vira um Guardião da Amazônia. O app é um PWA (funciona em tela cheia e offline depois do primeiro acesso) e grava cada partida no Google Firebase para gerar relatórios.
 
-Currently, two official plugins are available:
+## Rodando localmente
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Requisitos: **Node.js 22.12 ou mais recente** e npm.
 
-## React Compiler
+```sh
+npm install
+cp .env.example .env.local   # preencha com os dados do Firebase (veja abaixo)
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O app abre em http://localhost:5173. Sem o `.env.local` ele funciona normalmente, só não grava as partidas.
 
-## Expanding the Oxlint configuration
+| Script            | O que faz                                                   |
+| ----------------- | ----------------------------------------------------------- |
+| `npm run dev`     | Servidor de desenvolvimento com recarga automática          |
+| `npm run build`   | Gera a versão de produção em `dist/`                        |
+| `npm run preview` | Serve o `dist/` localmente, útil para testar o PWA e offline |
+| `npm run lint`    | Verifica o código com oxlint                                |
+| `npm run report`  | Gera um relatório HTML com as partidas salvas no Firestore  |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Conteúdo do quiz
+
+As perguntas ficam em [src/data/questions.js](src/data/questions.js). As fotos das opções e o vídeo da abertura são lidos de `public/assets/` (`q1-a.jpg` … `q10-d.jpg` e `intro-loop.mp4`), que precisam ser adicionados ao projeto. A pontuação mínima para virar Guardião é `GUARDIAN_SCORE`, no mesmo arquivo.
+
+## Integração com o Google Firebase
+
+O app usa o **Cloud Firestore** para guardar uma estatística de cada partida. Não há login: cada aparelho recebe um ID aleatório salvo no `localStorage`, o que diferencia pessoas diferentes usando a mesma rede.
+
+### Como os dados são gravados
+
+O código fica em [src/lib/tracking.js](src/lib/tracking.js) e é chamado por [src/hooks/useQuiz.js](src/hooks/useQuiz.js):
+
+1. **Início da partida** (`trackStart`): cria um documento em `plays/{id}` com `deviceId`, `total` de perguntas, `userAgent` e `startedAt`.
+2. **Cada resposta** (`trackAnswer`): atualiza `answers` com os acertos e erros até ali. Assim dá para saber em que pergunta uma partida não concluída parou.
+3. **Fim da partida** (`trackFinish`): atualiza o mesmo documento com `finishedAt`, `durationMs`, `score` e `answers` (lista de acertos e erros, na ordem das perguntas).
+
+Partidas que não chegam ao fim ficam sem `finishedAt`, com `answers` mostrando até onde foram. O SDK do Firebase (versão *lite*, menor) só é baixado quando a primeira partida começa, então não pesa no carregamento do app. Falhas de rede são apenas registradas no console e nunca travam o quiz.
+
+### Regras de segurança
+
+As regras em [firestore.rules](firestore.rules) permitem que qualquer visitante **crie** a própria partida, **acrescente uma resposta por vez** e a **finalize uma única vez**, validando cada campo. Ninguém consegue ler, apagar ou reescrever dados pelo app. A leitura só acontece pelo console do Firebase ou pelo script de relatório.
+
+### Configurando um projeto Firebase
+
+1. Crie um projeto no [console do Firebase](https://console.firebase.google.com/).
+2. Em **Firestore Database**, crie o banco de dados (modo produção).
+3. Em **Configurações do projeto → Seus apps**, adicione um app Web e copie os valores de `apiKey`, `authDomain`, `projectId` e `appId` para o `.env.local`:
+
+   ```sh
+   VITE_FIREBASE_API_KEY=...
+   VITE_FIREBASE_AUTH_DOMAIN=...
+   VITE_FIREBASE_PROJECT_ID=...
+   VITE_FIREBASE_APP_ID=...
+   ```
+
+4. Publique as regras de segurança:
+
+   ```sh
+   npx firebase-tools login
+   npx firebase-tools deploy --only firestore:rules --project SEU_PROJECT_ID
+   ```
+
+Esses valores do app Web não são secretos (vão no bundle público); a proteção dos dados vem das regras acima. Mesmo assim, o `.env.local` não é versionado.
+
+## Gerando relatórios
+
+```sh
+npm run report
+```
+
+O script [scripts/report.js](scripts/report.js) lê todas as partidas e salva uma página HTML em `reports/relatorio-AAAA-MM-DD-HH-mm.html`. Basta abrir o arquivo no navegador. A pasta `reports/` não é versionada.
+
+O relatório traz:
+
+- **Resumo**: partidas iniciadas e concluídas, aparelhos únicos, pontuação média, duração média e número de Guardiões
+- **Acerto por pergunta**
+- **Distribuição de pontuação**
+- **Partidas por dia**
+- **Últimas 50 partidas**
+
+### Credencial para o relatório
+
+Como as regras bloqueiam leitura pelo app, o script usa o **Firebase Admin SDK**, que precisa de uma chave de conta de serviço:
+
+1. No console do Firebase, vá em **Configurações do projeto → Contas de serviço → Gerar nova chave privada**.
+2. Salve o `.json` baixado na raiz do projeto, mantendo o nome original (`*-firebase-adminsdk-*.json`). Esse padrão está no `.gitignore`.
+3. Rode `npm run report`.
+
+Se preferir guardar a chave em outro lugar, informe o caminho no `.env.local`:
+
+```sh
+FIREBASE_SERVICE_ACCOUNT=/caminho/da/chave.json
+```
+
+O script procura a credencial nesta ordem: `FIREBASE_SERVICE_ACCOUNT`, `GOOGLE_APPLICATION_CREDENTIALS`, um `*-firebase-adminsdk-*.json` na raiz e, por fim, o login do `gcloud auth application-default login`. O projeto lido é o de `VITE_FIREBASE_PROJECT_ID`.
+
+> A chave de serviço dá acesso total ao projeto. Nunca a coloque no repositório nem a compartilhe.

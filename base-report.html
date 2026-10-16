@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório de uso · Quiz Guardião da Amazônia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Fira+Sans:wght@400;500;600;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!--
+  ===================================================================
+  MODELO DE RELATÓRIO — Quiz Guardião da Amazônia (Afluentes)
+  -------------------------------------------------------------------
+  Para gerar um novo relatório, substitua APENAS o JSON dentro de
+  <script id="report-data">. Todo o resto (números, frases de
+  destaque, gráficos e tabelas) é calculado a partir dele.
+
+  Campos:
+    projeto, geradoEm (ISO 8601), periodo {inicio, fim} (AAAA-MM-DD)
+    totalPerguntas            número de perguntas do quiz
+    partidas.iniciadas        partidas que passaram do botão JOGAR
+    partidas.concluidas       partidas que chegaram à tela de resultado
+    partidas.aparelhosUnicos  aparelhos distintos
+    partidas.duracaoMediaSeg  duração média das concluídas (s)
+    perguntas[]               {n, titulo?, respostas, acertos}
+                              "respostas" = pessoas que responderam a pergunta
+    distribuicaoPontuacao[]   índice = pontuação (0..N), valor = partidas
+    porDia[]                  {dia, iniciadas, concluidas}
+    ultimasPartidas[]         {inicio, concluida, pontuacao, duracaoSeg, aparelho}
+  ===================================================================
+-->
+<script type="application/json" id="report-data">
+{
+  "projeto": "afluentes-56a77",
+  "geradoEm": "2026-10-16T17:14:00-03:00",
+  "periodo": { "inicio": "2026-10-16", "fim": "2026-10-16" },
+  "totalPerguntas": 10,
+  "partidas": { "iniciadas": 4, "concluidas": 2, "aparelhosUnicos": 2, "duracaoMediaSeg": 17 },
+  "perguntas": [
+    { "n": 1,  "titulo": "", "respostas": 2, "acertos": 2 },
+    { "n": 2,  "titulo": "", "respostas": 2, "acertos": 1 },
+    { "n": 3,  "titulo": "", "respostas": 2, "acertos": 2 },
+    { "n": 4,  "titulo": "", "respostas": 2, "acertos": 1 },
+    { "n": 5,  "titulo": "", "respostas": 2, "acertos": 0 },
+    { "n": 6,  "titulo": "", "respostas": 2, "acertos": 1 },
+    { "n": 7,  "titulo": "", "respostas": 2, "acertos": 2 },
+    { "n": 8,  "titulo": "", "respostas": 2, "acertos": 2 },
+    { "n": 9,  "titulo": "", "respostas": 2, "acertos": 2 },
+    { "n": 10, "titulo": "", "respostas": 2, "acertos": 1 }
+  ],
+  "distribuicaoPontuacao": [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0],
+  "porDia": [
+    { "dia": "2026-10-16", "iniciadas": 4, "concluidas": 2 }
+  ],
+  "ultimasPartidas": [
+    { "inicio": "2026-10-16T17:03:00", "concluida": false, "pontuacao": null, "duracaoSeg": null, "aparelho": "30dba892" },
+    { "inicio": "2026-10-16T17:03:00", "concluida": true,  "pontuacao": 8,    "duracaoSeg": 20,   "aparelho": "30dba892" },
+    { "inicio": "2026-10-16T16:32:00", "concluida": false, "pontuacao": null, "duracaoSeg": null, "aparelho": "4aef5cbd" },
+    { "inicio": "2026-10-16T16:31:00", "concluida": true,  "pontuacao": 6,    "duracaoSeg": 15,   "aparelho": "4aef5cbd" }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --bg: #FBF9EC; --card: #FFFFFF; --ink: #1A1612; --ink-2: #4A4238; --muted: #6E655A;
+    --line: #E7E2CF; --grid: #EEEADB;
+    --blue: #0A6FB0; --blue-soft: #9CC8EA; --red: #C41A34; --gold: #B98900;
+    --tier-1: #B9D7EF; --tier-2: #4F98D2; --tier-3: #0A4F80;
+    --ok: #23843A; --warn: #A15C00; --bad: #C41A34;
+    --display: 'Bangers', Impact, 'Arial Narrow', sans-serif;
+    --body: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15110E; --card: #1F1A16; --ink: #F3EFE4; --ink-2: #CFC7B8; --muted: #A69C8D;
+      --line: #342C25; --grid: #2A231D;
+      --blue: #5AAEE8; --blue-soft: #2A5F86; --red: #F0607A; --gold: #F2C14E;
+      --tier-1: #2A5F86; --tier-2: #4F98D2; --tier-3: #A9D3F5;
+      --ok: #5CC173; --warn: #F0A43C; --bad: #F0607A;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+  .stripe { height: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M0 14 L7 2 L14 14 Z' fill='%23E4223F'/%3E%3Cpath d='M14 0 L21 12 L28 0 Z' fill='%23E4223F'/%3E%3C/svg%3E"); background-size: 28px 14px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  /* cabeçalho */
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+  h1 { margin: 4px 0 0; font-family: var(--display); font-weight: 400; font-size: clamp(34px, 6vw, 48px); line-height: 1; letter-spacing: .01em; }
+  .meta { margin: 0; color: var(--muted); font-size: 14px; text-align: right; }
+  .meta strong { color: var(--ink-2); font-weight: 600; }
+  @media (max-width: 640px) { .meta { text-align: left; } }
+
+  /* destaque em frase */
+  .summary { margin: 28px 0 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .summary h2 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  .summary ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .summary li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; }
+  .summary li svg { flex: 0 0 18px; margin-top: 3px; color: var(--blue); }
+
+  /* KPIs */
+  .kpis { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr)); gap: 12px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 2px; }
+  .kpi .label { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .kpi .value { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .kpi .value small { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .kpi .sub { color: var(--muted); font-size: 13px; }
+  .meter { margin-top: 8px; height: 6px; border-radius: 99px; background: var(--grid); overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
+
+  /* seções */
+  section.block { margin-top: 40px; }
+  .block-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
+  .block-head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .block-head p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 16px; }
+  .chart-box { position: relative; height: 280px; }
+  .chart-box.tall { height: 380px; }
+
+  .callouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; margin-top: 12px; }
+  .callout { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); }
+  .callout .k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .callout .v { font-size: 18px; font-weight: 800; margin-top: 2px; }
+  .callout .d { font-size: 13px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+
+  /* faixas de resultado */
+  .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tier { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .tier .range { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .tier .swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .tier .msg { font-family: var(--display); font-size: 22px; line-height: 1.05; letter-spacing: .01em; }
+  .tier .count { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tier .count small { font-size: 14px; font-weight: 500; color: var(--muted); }
+
+  /* tabelas */
+  details.data { margin-top: 12px; }
+  details.data summary { cursor: pointer; color: var(--blue); font-size: 14px; font-weight: 600; }
+  .scroll { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 99px; font-size: 13px; font-weight: 600; border: 1px solid currentColor; }
+  .pill.ok { color: var(--ok); }
+  .pill.no { color: var(--muted); }
+  code { font-size: 12px; color: var(--muted); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  footer p { margin: 4px 0; }
+
+  @media print {
+    body { background: #fff; }
+    .card, .kpi, .tier, .summary, .callout { break-inside: avoid; }
+    details.data { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="stripe" aria-hidden="true"></div>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">Afluentes · Relatório de uso</p>
+      <h1>Quiz Guardião da Amazônia</h1>
+    </div>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <section class="summary" aria-labelledby="sum-title">
+    <h2 id="sum-title">Em resumo</h2>
+    <ul id="insights"></ul>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Indicadores principais"></section>
+
+  <!-- Jornada -->
+  <section class="block" aria-labelledby="h-funil">
+    <div class="block-head">
+      <h2 id="h-funil">Até onde as pessoas chegam</h2>
+      <p>Pessoas que responderam cada pergunta, a partir das partidas iniciadas</p>
+    </div>
+    <div class="card">
+      <div class="chart-box"><canvas id="chFunil" role="img" aria-label="Gráfico de retenção ao longo das perguntas"></canvas></div>
+      <details class="data"><summary>Ver dados</summary><div class="scroll"><table id="tFunil"></table></div></details>
+    </div>
+  </section>
+
+  <!-- Acerto por pergunta -->
+  <section class="block" aria-labelledby="h-acerto">
+    <div class="block-head">
+      <h2 id="h-acerto">Acerto por pergunta</h2>
+      <p>Porcentagem de quem respondeu e acertou</p>
+    </div>
+    <div class="card">
+      <div class="chart-box tall"><canvas id="chAcerto" role="img" aria-label="Gráfico de taxa de acerto por pergunta"></canvas></div>
+      <details class="data"><summary>Ver dados</summary><div class="scroll"><table id="tAcerto"></table></div></details>
+    </div>
+    <div class="callouts" id="acertoCallouts"></div>
+  </section>
+
+  <!-- Resultado -->
+  <section class="block" aria-labelledby="h-res">
+    <div class="block-head">
+      <h2 id="h-res">Resultado das partidas concluídas</h2>
+      <p>Mensagem que cada jogador recebeu na tela final</p>
+    </div>
+    <div class="tiers" id="tiers"></div>
+    <div class="card">
+      <div class="chart-box"><canvas id="chPont" role="img" aria-label="Distribuição de pontuação"></canvas></div>
+      <details class="data"><summary>Ver dados</summary><div class="scroll"><table id="tPont"></table></div></details>
+    </div>
+  </section>
+
+  <!-- Por dia -->
+  <section class="block" aria-labelledby="h-dia">
+    <div class="block-head">
+      <h2 id="h-dia">Partidas por dia</h2>
+      <p id="diaSub"></p>
+    </div>
+    <div class="card">
+      <div class="chart-box"><canvas id="chDia" role="img" aria-label="Partidas iniciadas e concluídas por dia"></canvas></div>
+      <details class="data"><summary>Ver dados</summary><div class="scroll"><table id="tDia"></table></div></details>
+    </div>
+  </section>
+
+  <!-- Últimas partidas -->
+  <section class="block" aria-labelledby="h-ult">
+    <div class="block-head">
+      <h2 id="h-ult">Últimas partidas</h2>
+      <p>Aparelhos identificados por um código anônimo</p>
+    </div>
+    <div class="card" style="padding: 6px 6px">
+      <div class="scroll" style="margin-top: 0"><table id="tUlt"></table></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>Como ler:</strong> uma partida é <em>iniciada</em> ao tocar em JOGAR e <em>concluída</em> ao chegar à tela de resultado. “Guardiões” são partidas com 9 ou 10 acertos.</p>
+    <p id="foot"></p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('report-data').textContent);
+  const N = D.totalPerguntas || D.perguntas.length;
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+  const fmtInt = (n) => (n ?? 0).toLocaleString('pt-BR');
+  const fmtDur = (s) => (s == null ? '—' : (s >= 60 ? `${Math.floor(s / 60)}min ${Math.round(s % 60)}s` : `${Math.round(s)}s`));
+  const fmtDate = (iso) => new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('pt-BR');
+  const fmtDateTime = (iso) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const qLabel = (q) => (q.titulo ? `P${q.n} · ${q.titulo}` : `Pergunta ${q.n}`);
+
+  /* ---------- números derivados ---------- */
+  const P = D.partidas;
+  const dist = D.distribuicaoPontuacao || [];
+  const concl = P.concluidas;
+  const somaPont = dist.reduce((s, c, i) => s + c * i, 0);
+  const totalDist = dist.reduce((s, c) => s + c, 0) || concl;
+  const media = totalDist ? somaPont / totalDist : 0;
+  const tierOf = (score) => (score >= 9 ? 2 : score >= 7 ? 1 : 0);
+  const tiers = [0, 0, 0];
+  dist.forEach((c, i) => { tiers[tierOf(i)] += c; });
+  const guardioes = tiers[2];
+  const taxaConcl = pct(concl, P.iniciadas);
+  const porAparelho = P.aparelhosUnicos ? P.iniciadas / P.aparelhosUnicos : 0;
+  const acertos = D.perguntas.map((q) => ({ ...q, taxa: q.respostas ? q.acertos / q.respostas : 0 }));
+  const respondidas = acertos.filter((q) => q.respostas > 0);
+  const minTaxa = Math.min(...respondidas.map((q) => q.taxa));
+  const maxTaxa = Math.max(...respondidas.map((q) => q.taxa));
+  const maisDificeis = respondidas.filter((q) => q.taxa === minTaxa);
+  const maisFaceis = respondidas.filter((q) => q.taxa === maxTaxa);
+  const acertoGeral = pct(respondidas.reduce((s, q) => s + q.acertos, 0), respondidas.reduce((s, q) => s + q.respostas, 0));
+
+  // retenção: iniciadas → respondeu P1 … P10
+  const funil = [{ label: 'Início', v: P.iniciadas }].concat(D.perguntas.map((q) => ({ label: `P${q.n}`, v: q.respostas })));
+  let maiorQueda = { de: null, para: null, perda: 0 };
+  for (let i = 1; i < funil.length; i++) {
+    const perda = funil[i - 1].v - funil[i].v;
+    if (perda > maiorQueda.perda) maiorQueda = { de: funil[i - 1].label, para: funil[i].label, perda };
+  }
+
+  /* ---------- cabeçalho ---------- */
+  const per = D.periodo && (D.periodo.inicio === D.periodo.fim ? fmtDate(D.periodo.inicio) : `${fmtDate(D.periodo.inicio)} a ${fmtDate(D.periodo.fim)}`);
+  $('meta').innerHTML = `Período <strong>${esc(per || '—')}</strong><br>Gerado em ${esc(fmtDateTime(D.geradoEm))} · <code>${esc(D.projeto)}</code>`;
+  $('foot').textContent = `Projeto ${D.projeto} · gerado em ${fmtDateTime(D.geradoEm)}`;
+
+  /* ---------- resumo em frases ---------- */
+  const icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+  const ins = [];
+  ins.push(`<strong>${fmtInt(P.iniciadas)}</strong> partidas iniciadas por <strong>${fmtInt(P.aparelhosUnicos)}</strong> aparelho${P.aparelhosUnicos === 1 ? '' : 's'}; <strong>${taxaConcl}%</strong> chegaram até o resultado.`);
+  if (maiorQueda.perda > 0) {
+    const onde = maiorQueda.de === 'Início' ? 'logo depois de tocar em JOGAR, antes da primeira resposta' : `entre ${maiorQueda.de} e ${maiorQueda.para}`;
+    ins.push(`A maior desistência acontece ${onde} (${fmtInt(maiorQueda.perda)} partida${maiorQueda.perda === 1 ? '' : 's'}).`);
+  }
+  if (respondidas.length) {
+    ins.push(`${maisDificeis.length > 1 ? 'Perguntas mais difíceis' : 'Pergunta mais difícil'}: <strong>${maisDificeis.map((q) => 'P' + q.n).join(', ')}</strong> (${Math.round(minTaxa * 100)}% de acerto). Acerto geral: ${acertoGeral}%.`);
+  }
+  ins.push(guardioes
+    ? `<strong>${fmtInt(guardioes)}</strong> jogador${guardioes === 1 ? '' : 'es'} se tornou Guardião da Amazônia (${pct(guardioes, concl)}% das concluídas).`
+    : `Ninguém fez 9 ou 10 acertos ainda — nenhum Guardião da Amazônia no período.`);
+  $('insights').innerHTML = ins.map((t) => `<li>${icon}<span>${t}</span></li>`).join('');
+
+  /* ---------- KPIs ---------- */
+  const kpis = [
+    { label: 'Partidas iniciadas', value: fmtInt(P.iniciadas), sub: `${porAparelho.toFixed(1).replace('.', ',')} por aparelho` },
+    { label: 'Taxa de conclusão', value: `${taxaConcl}%`, sub: `${fmtInt(concl)} de ${fmtInt(P.iniciadas)} partidas`, meter: taxaConcl },
+    { label: 'Aparelhos únicos', value: fmtInt(P.aparelhosUnicos), sub: 'visitantes aproximados' },
+    { label: 'Pontuação média', value: `${media.toFixed(1).replace('.', ',')}<small> / ${N}</small>`, sub: `acerto geral ${acertoGeral}%`, meter: pct(media, N) },
+    { label: 'Duração média', value: fmtDur(P.duracaoMediaSeg), sub: 'partidas concluídas' },
+    { label: 'Guardiões', value: `${fmtInt(guardioes)}<small> (${pct(guardioes, concl)}%)</small>`, sub: '9 ou 10 acertos' }
+  ];
+  $('kpis').innerHTML = kpis.map((k) => `
+    <div class="kpi">
+      <span class="label">${k.label}</span>
+      <span class="value">${k.value}</span>
+      <span class="sub">${k.sub}</span>
+      ${k.meter != null ? `<div class="meter" aria-hidden="true"><span style="width:${Math.min(100, k.meter)}%"></span></div>` : ''}
+    </div>`).join('');
+
+  /* ---------- faixas de resultado ---------- */
+  const tierDef = [
+    { range: `Até 6 acertos`, msg: 'Visite a exposição e conheça mais sobre a Amazônia.', color: '--tier-1' },
+    { range: '7–8 acertos', msg: 'Quase lá!', color: '--tier-2' },
+    { range: '9–10 acertos', msg: 'Você está pronto para ser um Guardião da Amazônia.', color: '--tier-3' }
+  ];
+  $('tiers').innerHTML = tierDef.map((t, i) => `
+    <div class="tier">
+      <span class="range"><span class="swatch" style="background:var(${t.color})"></span>${t.range}</span>
+      <span class="count">${fmtInt(tiers[i])} <small>${pct(tiers[i], concl)}% das concluídas</small></span>
+      <span class="msg">${t.msg}</span>
+    </div>`).join('');
+
+  /* ---------- tabelas ---------- */
+  const table = (el, head, rows) => {
+    $(el).innerHTML = `<thead><tr>${head.map((h) => `<th class="${h.num ? 'num' : ''}">${h.t}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map((r) => `<tr>${r.map((c, i) => `<td class="${head[i].num ? 'num' : ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  };
+  table('tFunil', [{ t: 'Etapa' }, { t: 'Pessoas', num: true }, { t: '% das iniciadas', num: true }],
+    funil.map((f) => [f.label === 'Início' ? 'Tocou em JOGAR' : f.label, fmtInt(f.v), pct(f.v, P.iniciadas) + '%']));
+  table('tAcerto', [{ t: 'Pergunta' }, { t: 'Respostas', num: true }, { t: 'Acertos', num: true }, { t: 'Taxa de acerto', num: true }],
+    acertos.map((q) => [esc(qLabel(q)), fmtInt(q.respostas), fmtInt(q.acertos), Math.round(q.taxa * 100) + '%']));
+  table('tPont', [{ t: 'Pontuação' }, { t: 'Partidas', num: true }],
+    dist.map((c, i) => [`${i} / ${N}`, fmtInt(c)]));
+  table('tDia', [{ t: 'Dia' }, { t: 'Iniciadas', num: true }, { t: 'Concluídas', num: true }, { t: 'Conclusão', num: true }],
+    D.porDia.map((d) => [fmtDate(d.dia), fmtInt(d.iniciadas), fmtInt(d.concluidas), pct(d.concluidas, d.iniciadas) + '%']));
+  table('tUlt', [{ t: 'Início' }, { t: 'Status' }, { t: 'Pontuação', num: true }, { t: 'Resultado' }, { t: 'Duração', num: true }, { t: 'Aparelho' }],
+    D.ultimasPartidas.map((p) => [
+      fmtDateTime(p.inicio),
+      p.concluida
+        ? '<span class="pill ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>Concluída</span>'
+        : '<span class="pill no"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M6 12h12"/></svg>Não concluída</span>',
+      p.pontuacao == null ? '—' : `${p.pontuacao} / ${N}`,
+      p.pontuacao == null ? '—' : ['Visite a exposição', 'Quase lá', 'Guardião'][tierOf(p.pontuacao)],
+      fmtDur(p.duracaoSeg),
+      `<code>${esc(p.aparelho)}</code>`
+    ]));
+
+  /* ---------- destaques de acerto ---------- */
+  const callout = (dotVar, k, v, d) => `<div class="callout"><div class="k"><span class="dot" style="background:var(${dotVar})"></span>${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+  $('acertoCallouts').innerHTML = respondidas.length ? [
+    callout('--bad', maisDificeis.length > 1 ? 'Mais difíceis' : 'Mais difícil', maisDificeis.map((q) => 'P' + q.n).join(', '), `${Math.round(minTaxa * 100)}% de acerto — vale revisar enunciado ou imagens`),
+    callout('--ok', maisFaceis.length > 1 ? 'Mais fáceis' : 'Mais fácil', maisFaceis.map((q) => 'P' + q.n).join(', '), `${Math.round(maxTaxa * 100)}% de acerto`),
+    callout('--blue', 'Acerto geral', acertoGeral + '%', `${fmtInt(respondidas.reduce((s, q) => s + q.respostas, 0))} respostas registradas`)
+  ].join('') : '';
+
+  /* ---------- gráficos ---------- */
+  if (!window.Chart) return;
+  const ink2 = css('--ink-2'), muted = css('--muted'), grid = css('--grid'), blue = css('--blue'), blueSoft = css('--blue-soft'), card = css('--card');
+  Chart.defaults.font.family = "'Fira Sans', system-ui, sans-serif";
+  Chart.defaults.font.size = 13;
+  Chart.defaults.color = muted;
+  Chart.defaults.plugins.tooltip.backgroundColor = css('--ink');
+  Chart.defaults.plugins.tooltip.titleColor = card;
+  Chart.defaults.plugins.tooltip.bodyColor = card;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.maintainAspectRatio = false;
+  const axis = (extra) => Object.assign({ grid: { color: grid, drawTicks: false }, border: { display: false }, ticks: { padding: 8 } }, extra);
+
+  // 1) retenção
+  new Chart($('chFunil'), {
+    type: 'line',
+    data: {
+      labels: funil.map((f) => f.label),
+      datasets: [{
+        data: funil.map((f) => f.v), borderColor: blue, backgroundColor: blue + '22', fill: true,
+        borderWidth: 2, tension: 0, stepped: false, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: blue, pointBorderColor: card, pointBorderWidth: 2
+      }]
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: (it) => it[0].label === 'Início' ? 'Tocou em JOGAR' : `Respondeu ${it[0].label}`,
+        label: (it) => ` ${it.parsed.y} pessoas · ${pct(it.parsed.y, P.iniciadas)}% das iniciadas`
+      } } },
+      scales: { x: axis({ grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, padding: 8 } }), y: axis({ beginAtZero: true, suggestedMax: P.iniciadas, ticks: { precision: 0, padding: 8 } }) }
+    }
+  });
+
+  // 2) acerto por pergunta (barras horizontais)
+  new Chart($('chAcerto'), {
+    type: 'bar',
+    data: {
+      labels: acertos.map((q) => qLabel(q)),
+      datasets: [{
+        data: acertos.map((q) => Math.round(q.taxa * 100)),
+        backgroundColor: blue, borderRadius: 4, borderSkipped: 'start', barPercentage: 0.7, categoryPercentage: 0.9
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: (it) => { const q = acertos[it.dataIndex]; return ` ${it.parsed.x}% · ${q.acertos} de ${q.respostas} acertaram`; }
+      } } },
+      scales: { x: axis({ min: 0, max: 100, ticks: { callback: (v) => v + '%', padding: 8 } }), y: axis({ grid: { display: false }, ticks: { color: ink2, padding: 8 } }) }
+    }
+  });
+
+  // 3) distribuição de pontuação, colorida pela faixa de resultado
+  const tierColor = [css('--tier-1'), css('--tier-2'), css('--tier-3')];
+  new Chart($('chPont'), {
+    type: 'bar',
+    data: {
+      labels: dist.map((_, i) => String(i)),
+      datasets: [{ data: dist, backgroundColor: dist.map((_, i) => tierColor[tierOf(i)]), borderRadius: 4, borderSkipped: 'start', barPercentage: 0.8, categoryPercentage: 0.92 }]
+    },
+    options: {
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: (it) => `${it[0].label} acerto${it[0].label === '1' ? '' : 's'}`,
+        label: (it) => ` ${it.parsed.y} partida${it.parsed.y === 1 ? '' : 's'} · ${tierDef[tierOf(it.dataIndex)].range}`
+      } } },
+      scales: {
+        x: axis({ grid: { display: false }, title: { display: true, text: 'Acertos', color: muted } }),
+        y: axis({ beginAtZero: true, ticks: { precision: 0, padding: 8 }, title: { display: true, text: 'Partidas', color: muted } })
+      }
+    }
+  });
+
+  // 4) por dia
+  $('diaSub').textContent = D.porDia.length > 1 ? `${D.porDia.length} dias no período` : 'Um dia no período';
+  new Chart($('chDia'), {
+    type: 'bar',
+    data: {
+      labels: D.porDia.map((d) => fmtDate(d.dia)),
+      datasets: [
+        { label: 'Iniciadas', data: D.porDia.map((d) => d.iniciadas), backgroundColor: blueSoft, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 48 },
+        { label: 'Concluídas', data: D.porDia.map((d) => d.concluidas), backgroundColor: blue, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 48 }
+      ]
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, color: ink2 } } },
+      scales: { x: axis({ grid: { display: false } }), y: axis({ beginAtZero: true, ticks: { precision: 0, padding: 8 } }) }
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Qualquer visitante pode criar e finalizar a própria partida, mas ninguém lê,
+// Qualquer visitante pode criar, registrar respostas e finalizar a própria partida, mas ninguém lê,
 // apaga ou reescreve dados pelo app. Os dados são consultados só pelo console do Firebase.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,18 +18,29 @@ service cloud.firestore {
         && request.resource.data.userAgent.size() <= 512
         && request.resource.data.startedAt == request.time;
 
-      // Finaliza uma única vez, sem mexer nos dados de início
+      // Enquanto não termina, a partida só aceita respostas novas (uma a uma) e a
+      // finalização, uma única vez; os dados de início nunca mudam
       allow update: if !('finishedAt' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['finishedAt', 'durationMs', 'score', 'answers'])
-        && request.resource.data.finishedAt == request.time
-        && request.resource.data.durationMs is int
-        && request.resource.data.durationMs >= 0
         && request.resource.data.answers is list
         && request.resource.data.answers.size() <= resource.data.total
-        && request.resource.data.score is int
-        && request.resource.data.score >= 0
-        && request.resource.data.score <= request.resource.data.answers.size();
+        && (isAnswer() || isFinish());
+
+      function isAnswer() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers'])
+          && request.resource.data.answers.size() == resource.data.get('answers', []).size() + 1;
+      }
+
+      function isFinish() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['finishedAt', 'durationMs', 'score', 'answers'])
+          && request.resource.data.answers.size() >= resource.data.get('answers', []).size()
+          && request.resource.data.finishedAt == request.time
+          && request.resource.data.durationMs is int
+          && request.resource.data.durationMs >= 0
+          && request.resource.data.score is int
+          && request.resource.data.score >= 0
+          && request.resource.data.score <= request.resource.data.answers.size();
+      }
     }
   }
 }

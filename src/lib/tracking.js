@@ -45,10 +45,16 @@ async function write(fn) {
 
 let current = null;
 
+// Encadeia as gravações da partida: cada uma espera a anterior, então o documento já
+// existe quando os updates chegam e o último update é sempre o mais recente
+function enqueue(play, fn) {
+  play.queue = play.queue.then(() => write(fn));
+}
+
 export function trackStart(total) {
-  const play = { id: crypto.randomUUID(), startedAt: performance.now() };
+  const play = { id: crypto.randomUUID(), startedAt: performance.now(), queue: Promise.resolve() };
   current = play;
-  play.created = write(({ doc, setDoc, serverTimestamp }, db) =>
+  enqueue(play, ({ doc, setDoc, serverTimestamp }, db) =>
     setDoc(doc(db, "plays", play.id), {
       deviceId: deviceId(),
       total,
@@ -58,20 +64,24 @@ export function trackStart(total) {
   );
 }
 
+/** Grava as respostas até agora, para o relatório saber onde a partida parou. */
+export function trackAnswer(answers) {
+  const play = current;
+  if (!play) return;
+  enqueue(play, ({ doc, updateDoc }, db) => updateDoc(doc(db, "plays", play.id), { answers }));
+}
+
 export function trackFinish(answers) {
   const play = current;
   if (!play) return;
   current = null;
   const durationMs = Math.round(performance.now() - play.startedAt);
-  // Espera a criação terminar, senão o update pode chegar antes do documento existir
-  play.created.then(() =>
-    write(({ doc, updateDoc, serverTimestamp }, db) =>
-      updateDoc(doc(db, "plays", play.id), {
-        finishedAt: serverTimestamp(),
-        durationMs,
-        score: answers.filter(Boolean).length,
-        answers,
-      }),
-    ),
+  enqueue(play, ({ doc, updateDoc, serverTimestamp }, db) =>
+    updateDoc(doc(db, "plays", play.id), {
+      finishedAt: serverTimestamp(),
+      durationMs,
+      score: answers.filter(Boolean).length,
+      answers,
+    }),
   );
 }
