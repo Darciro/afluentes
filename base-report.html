@@ -26,6 +26,8 @@
     partidas.duracaoMediaSeg  duração média das concluídas (s)
     perguntas[]               {n, titulo?, respostas, acertos}
                               "respostas" = pessoas que responderam a pergunta
+    faixas[]                  {min, max, titulo, mensagem} em ordem crescente
+                              (vem de RESULT_TIERS em src/data/questions.js)
     distribuicaoPontuacao[]   índice = pontuação (0..N), valor = partidas
     porDia[]                  {dia, iniciadas, concluidas}
     ultimasPartidas[]         {inicio, concluida, pontuacao, duracaoSeg, aparelho}
@@ -49,6 +51,11 @@
     { "n": 8,  "titulo": "", "respostas": 2, "acertos": 2 },
     { "n": 9,  "titulo": "", "respostas": 2, "acertos": 2 },
     { "n": 10, "titulo": "", "respostas": 2, "acertos": 1 }
+  ],
+  "faixas": [
+    { "min": 0, "max": 4,  "titulo": "Todo guardião começa por algum lugar!", "mensagem": "Visite a exposição e aprenda mais sobre a Amazônia!" },
+    { "min": 5, "max": 7,  "titulo": "Quase lá!", "mensagem": "Visite a exposição e fique pronto para ser um guardião da Amazônia!" },
+    { "min": 8, "max": 10, "titulo": "Você está pronto para proteger a Amazônia!", "mensagem": "Visite a exposição e descubra ainda mais sobre a Amazônia e as histórias de quem cuida da floresta." }
   ],
   "distribuicaoPontuacao": [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0],
   "porDia": [
@@ -137,6 +144,7 @@
   .tier .swatch { width: 12px; height: 12px; border-radius: 3px; }
   .tier .msg { font-family: var(--display); font-size: 22px; line-height: 1.05; letter-spacing: .01em; }
   .tier .count { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tier .sub { font-size: 13px; color: var(--muted); }
   .tier .count small { font-size: 14px; font-weight: 500; color: var(--muted); }
 
   /* tabelas */
@@ -243,7 +251,7 @@
   </section>
 
   <footer>
-    <p><strong>Como ler:</strong> uma partida é <em>iniciada</em> ao tocar em JOGAR e <em>concluída</em> ao chegar à tela de resultado. “Guardiões” são partidas com 9 ou 10 acertos.</p>
+    <p><strong>Como ler:</strong> uma partida é <em>iniciada</em> ao tocar em JOGAR e <em>concluída</em> ao chegar à tela de resultado. A <em>faixa máxima</em> é a de quem fez <span id="topRange"></span> e recebeu “<span id="topTitle"></span>”.</p>
     <p id="foot"></p>
   </footer>
 </main>
@@ -269,10 +277,14 @@
   const somaPont = dist.reduce((s, c, i) => s + c * i, 0);
   const totalDist = dist.reduce((s, c) => s + c, 0) || concl;
   const media = totalDist ? somaPont / totalDist : 0;
-  const tierOf = (score) => (score >= 9 ? 2 : score >= 7 ? 1 : 0);
-  const tiers = [0, 0, 0];
+  // faixas de resultado (0–4 / 5–7 / 8–10 hoje), da menor para a maior
+  const faixas = D.faixas;
+  const rangeOf = (f) => (f.min === f.max ? `${f.min} acerto${f.min === 1 ? '' : 's'}` : `${f.min} a ${f.max} acertos`);
+  const tierOf = (score) => faixas.findLastIndex((f) => score >= f.min);
+  const tiers = faixas.map(() => 0);
   dist.forEach((c, i) => { tiers[tierOf(i)] += c; });
-  const guardioes = tiers[2];
+  const topo = faixas.at(-1);
+  const guardioes = tiers.at(-1);
   const taxaConcl = pct(concl, P.iniciadas);
   const porAparelho = P.aparelhosUnicos ? P.iniciadas / P.aparelhosUnicos : 0;
   const acertos = D.perguntas.map((q) => ({ ...q, taxa: q.respostas ? q.acertos / q.respostas : 0 }));
@@ -294,6 +306,8 @@
   /* ---------- cabeçalho ---------- */
   const per = D.periodo && (D.periodo.inicio === D.periodo.fim ? fmtDate(D.periodo.inicio) : `${fmtDate(D.periodo.inicio)} a ${fmtDate(D.periodo.fim)}`);
   $('meta').innerHTML = `Período <strong>${esc(per || '—')}</strong><br>Gerado em ${esc(fmtDateTime(D.geradoEm))} · <code>${esc(D.projeto)}</code>`;
+  $('topRange').textContent = rangeOf(topo);
+  $('topTitle').textContent = topo.titulo;
   $('foot').textContent = `Projeto ${D.projeto} · gerado em ${fmtDateTime(D.geradoEm)}`;
 
   /* ---------- resumo em frases ---------- */
@@ -308,8 +322,8 @@
     ins.push(`${maisDificeis.length > 1 ? 'Perguntas mais difíceis' : 'Pergunta mais difícil'}: <strong>${maisDificeis.map((q) => 'P' + q.n).join(', ')}</strong> (${Math.round(minTaxa * 100)}% de acerto). Acerto geral: ${acertoGeral}%.`);
   }
   ins.push(guardioes
-    ? `<strong>${fmtInt(guardioes)}</strong> jogador${guardioes === 1 ? '' : 'es'} se tornou Guardião da Amazônia (${pct(guardioes, concl)}% das concluídas).`
-    : `Ninguém fez 9 ou 10 acertos ainda — nenhum Guardião da Amazônia no período.`);
+    ? `<strong>${fmtInt(guardioes)}</strong> jogador${guardioes === 1 ? '' : 'es'} fe${guardioes === 1 ? 'z' : 'zeram'} ${rangeOf(topo)} e ouvi${guardioes === 1 ? 'u' : 'ram'} “${esc(topo.titulo)}” (${pct(guardioes, concl)}% das concluídas).`
+    : `Ninguém fez ${rangeOf(topo)} ainda — ninguém chegou à faixa máxima no período.`);
   $('insights').innerHTML = ins.map((t) => `<li>${icon}<span>${t}</span></li>`).join('');
 
   /* ---------- KPIs ---------- */
@@ -319,7 +333,7 @@
     { label: 'Aparelhos únicos', value: fmtInt(P.aparelhosUnicos), sub: 'visitantes aproximados' },
     { label: 'Pontuação média', value: `${media.toFixed(1).replace('.', ',')}<small> / ${N}</small>`, sub: `acerto geral ${acertoGeral}%`, meter: pct(media, N) },
     { label: 'Duração média', value: fmtDur(P.duracaoMediaSeg), sub: 'partidas concluídas' },
-    { label: 'Guardiões', value: `${fmtInt(guardioes)}<small> (${pct(guardioes, concl)}%)</small>`, sub: '9 ou 10 acertos' }
+    { label: 'Faixa máxima', value: `${fmtInt(guardioes)}<small> (${pct(guardioes, concl)}%)</small>`, sub: rangeOf(topo) }
   ];
   $('kpis').innerHTML = kpis.map((k) => `
     <div class="kpi">
@@ -330,16 +344,14 @@
     </div>`).join('');
 
   /* ---------- faixas de resultado ---------- */
-  const tierDef = [
-    { range: `Até 6 acertos`, msg: 'Visite a exposição e conheça mais sobre a Amazônia.', color: '--tier-1' },
-    { range: '7–8 acertos', msg: 'Quase lá!', color: '--tier-2' },
-    { range: '9–10 acertos', msg: 'Você está pronto para ser um Guardião da Amazônia.', color: '--tier-3' }
-  ];
-  $('tiers').innerHTML = tierDef.map((t, i) => `
+  // Cores do mais claro ao mais escuro; com mais de 3 faixas, as últimas repetem a mais forte
+  const tierVar = (i) => `--tier-${Math.min(3, i + 1 + Math.max(0, 3 - faixas.length))}`;
+  $('tiers').innerHTML = faixas.map((f, i) => `
     <div class="tier">
-      <span class="range"><span class="swatch" style="background:var(${t.color})"></span>${t.range}</span>
+      <span class="range"><span class="swatch" style="background:var(${tierVar(i)})"></span>${rangeOf(f)}</span>
       <span class="count">${fmtInt(tiers[i])} <small>${pct(tiers[i], concl)}% das concluídas</small></span>
-      <span class="msg">${t.msg}</span>
+      <span class="msg">${esc(f.titulo)}</span>
+      <span class="sub">${esc(f.mensagem)}</span>
     </div>`).join('');
 
   /* ---------- tabelas ---------- */
@@ -362,7 +374,7 @@
         ? '<span class="pill ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>Concluída</span>'
         : '<span class="pill no"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M6 12h12"/></svg>Não concluída</span>',
       p.pontuacao == null ? '—' : `${p.pontuacao} / ${N}`,
-      p.pontuacao == null ? '—' : ['Visite a exposição', 'Quase lá', 'Guardião'][tierOf(p.pontuacao)],
+      p.pontuacao == null ? '—' : esc(faixas[tierOf(p.pontuacao)].titulo),
       fmtDur(p.duracaoSeg),
       `<code>${esc(p.aparelho)}</code>`
     ]));
@@ -429,7 +441,7 @@
   });
 
   // 3) distribuição de pontuação, colorida pela faixa de resultado
-  const tierColor = [css('--tier-1'), css('--tier-2'), css('--tier-3')];
+  const tierColor = faixas.map((_, i) => css(tierVar(i)));
   new Chart($('chPont'), {
     type: 'bar',
     data: {
@@ -439,7 +451,7 @@
     options: {
       plugins: { legend: { display: false }, tooltip: { callbacks: {
         title: (it) => `${it[0].label} acerto${it[0].label === '1' ? '' : 's'}`,
-        label: (it) => ` ${it.parsed.y} partida${it.parsed.y === 1 ? '' : 's'} · ${tierDef[tierOf(it.dataIndex)].range}`
+        label: (it) => ` ${it.parsed.y} partida${it.parsed.y === 1 ? '' : 's'} · ${rangeOf(faixas[tierOf(it.dataIndex)])}`
       } } },
       scales: {
         x: axis({ grid: { display: false }, title: { display: true, text: 'Acertos', color: muted } }),

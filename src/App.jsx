@@ -1,5 +1,6 @@
 import { useState } from "react";
 import QuestionScreen from "./components/QuestionScreen";
+import LangSwitch from "./components/LangSwitch";
 import ResultScreen from "./components/ResultScreen";
 import SoundToggle from "./components/SoundToggle";
 import StartScreen from "./components/StartScreen";
@@ -31,6 +32,14 @@ export default function App({
     setSound((s) => !s);
   };
 
+  // Idioma + som: seletor por extenso na tela inicial, compacto (PT | NO) nas internas
+  const tools = (
+    <div className="flex items-center gap-2">
+      <LangSwitch variant="compact" />
+      <SoundToggle on={sound} onToggle={toggleSound} />
+    </div>
+  );
+
   return (
     <div className="flex min-h-dvh justify-center bg-gq-night font-body text-gq-ink [-webkit-tap-highlight-color:transparent] min-[481px]:items-center min-[481px]:py-6">
       {quiz.phase === "start" && (
@@ -39,7 +48,12 @@ export default function App({
           posterSrc={posterSrc}
           logoSrc={logoSrc}
           onStart={start}
-          soundToggle={<SoundToggle on={sound} onToggle={toggleSound} dark />}
+          tools={
+            <>
+              <LangSwitch variant="full" />
+              <SoundToggle on={sound} onToggle={toggleSound} dark />
+            </>
+          }
         />
       )}
 
@@ -52,7 +66,7 @@ export default function App({
           logoSrc={logoSrc}
           onChoose={quiz.choose}
           onNext={quiz.next}
-          soundToggle={<SoundToggle on={sound} onToggle={toggleSound} />}
+          tools={tools}
         />
       )}
 
@@ -64,7 +78,7 @@ export default function App({
           posterSrc={posterSrc}
           logoSrc={logoSrc}
           onRestart={quiz.start}
-          soundToggle={<SoundToggle on={sound} onToggle={toggleSound} dark />}
+          tools={tools}
         />
       )}
     </div>

@@ -50,8 +50,8 @@ export default defineConfig({
             },
           },
           {
-            // Fotos das perguntas em /public/assets
-            urlPattern: ({ url, request }) => url.pathname.startsWith('/assets/') && request.destination === 'image',
+            // Fotos das perguntas em /public/quiz-assets
+            urlPattern: ({ url, request }) => url.pathname.startsWith('/quiz-assets/') && request.destination === 'image',
             handler: 'CacheFirst',
             options: {
               cacheName: 'quiz-images',

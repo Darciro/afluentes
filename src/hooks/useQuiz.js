@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { GUARDIAN_SCORE } from "../data/questions";
+import { isTopTier } from "../data/questions";
 import { trackAnswer, trackFinish, trackStart } from "../lib/tracking";
 
 const preload = (question) =>
   question?.options.forEach((o) => {
-    new Image().src = o.image;
+    if (o.kind === "image") new Image().src = o.src;
   });
 
 /** Estado e transições do quiz: início → perguntas → resultado. */
@@ -54,7 +54,7 @@ export function useQuiz(questions, sfx) {
     }
     setPhase("result");
     trackFinish(answers);
-    if (score >= GUARDIAN_SCORE) sfx.fanfare();
+    if (isTopTier(score)) sfx.fanfare();
   };
 
   return { phase, index, question, picked, answers, score, start, choose, next };

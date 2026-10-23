@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,31 @@ import { getFirestore } from "firebase-admin/firestore";
 
 const RECENT_LIMIT = 50;
 const TEMPLATE = join(dirname(fileURLToPath(import.meta.url)), "../base-report.html");
+
+// questions.js importa imagens (coisa do Vite); no Node elas viram só a URL do arquivo
+registerHooks({
+  load(url, context, nextLoad) {
+    if (/\.(webp|png|jpe?g|svg|mp4)$/.test(url)) {
+      return { format: "module", source: `export default ${JSON.stringify(url)};`, shortCircuit: true };
+    }
+    return nextLoad(url, context);
+  },
+});
+const { DEFAULT_QUESTIONS, RESULT_TIERS } = await import("../src/data/questions.js");
+
+/** Rótulos curtos para os gráficos, pelo id da pergunta (sem rótulo, usa o id). */
+const TITULOS = {
+  mapa: "Mapa",
+  ccpi: "Cooperação policial",
+  noruegas: "Quantas Noruegas",
+  arara: "Arara",
+  acai: "Açaí",
+  castanha: "Castanha-do-Brasil",
+  povos: "Povos indígenas",
+  babacu: "Babaçu",
+  barcos: "Barcos",
+  fundo: "Fundo Amazônia",
+};
 
 const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
 if (!projectId) {
@@ -65,11 +91,25 @@ const dayKey = (d) => d.toLocaleDateString("sv-SE");
 
 // As respostas são gravadas uma a uma, então partidas não concluídas também contam
 // (partidas antigas só têm respostas se foram concluídas)
-const totalQuestions = Math.max(0, ...plays.map((p) => p.total ?? 0));
+const totalQuestions = Math.max(DEFAULT_QUESTIONS.length, ...plays.map((p) => p.total ?? 0));
 const perguntas = Array.from({ length: totalQuestions }, (_, i) => {
   const answered = plays.filter((p) => p.answers?.length > i);
-  return { n: i + 1, titulo: "", respostas: answered.length, acertos: answered.filter((p) => p.answers[i]).length };
+  const id = DEFAULT_QUESTIONS[i]?.id;
+  return {
+    n: i + 1,
+    titulo: TITULOS[id] ?? id ?? "",
+    respostas: answered.length,
+    acertos: answered.filter((p) => p.answers[i]).length,
+  };
 });
+
+// Faixas de resultado em ordem crescente, cada uma com o intervalo de acertos que cobre
+const faixas = RESULT_TIERS.toSorted((a, b) => a.min - b.min).map((t, i, arr) => ({
+  min: t.min,
+  max: i < arr.length - 1 ? arr[i + 1].min - 1 : totalQuestions,
+  titulo: t.title.pt,
+  mensagem: t.message.pt,
+}));
 
 const distribuicaoPontuacao = Array.from(
   { length: totalQuestions + 1 },
@@ -100,6 +140,7 @@ const data = {
     duracaoMediaSeg: toSec(avg(finished.map((p) => p.durationMs))),
   },
   perguntas,
+  faixas,
   distribuicaoPontuacao,
   porDia,
   ultimasPartidas: plays

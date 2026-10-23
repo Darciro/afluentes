@@ -1,9 +1,12 @@
+import { useLang } from "../i18n/useLang";
+
 /** Breadcrumb de progresso: um segmento por pergunta. */
 export default function ProgressSteps({ questions, index }) {
+  const { t } = useLang();
   return (
     <ol
       className="m-0 grid list-none grid-cols-10 gap-1 p-0"
-      aria-label={`Pergunta ${index + 1} de ${questions.length}`}
+      aria-label={t.counter(index + 1, questions.length)}
     >
       {questions.map((q, i) => (
         <li

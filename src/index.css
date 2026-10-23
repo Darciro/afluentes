@@ -21,6 +21,7 @@
   --animate-gq-pop-score: gq-pop .5s cubic-bezier(.2,1.6,.4,1) both;
   --animate-gq-glow: gq-glow 1.6s ease-in-out infinite;
   --animate-gq-shake: gq-shake .45s ease-in-out 1;
+  --animate-gq-pop-bounce: gq-pop .5s cubic-bezier(.2,1.4,.4,1) both, gq-bounce 2.4s ease-in-out .6s infinite;
   --animate-gq-halo: gq-halo 2s ease-in-out infinite;
 }
 
@@ -47,6 +48,7 @@ body {
   20%, 60% { transform: translateX(-5px) }
   40%, 80% { transform: translateX(5px) }
 }
+@keyframes gq-bounce { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
 @keyframes gq-halo {
   0%, 100% { box-shadow: 0 0 0 4px var(--color-gq-gold), 0 0 30px 6px rgba(255,210,63,.45) }
   50% { box-shadow: 0 0 0 4px var(--color-gq-gold), 0 0 54px 16px rgba(255,210,63,.7) }
