@@ -120,6 +120,8 @@ npm run build
 npm start          # porta 3000 por padrão (PORT=...)
 ```
 
-No servidor precisam estar o `.env.local` (com `VITE_FIREBASE_PROJECT_ID`, `REPORT_USER` e `REPORT_PASSWORD`) e a chave de conta de serviço. Os relatórios ficam em `reports/`. Para as datas saírem no horário de Brasília, defina `TZ=America/Sao_Paulo`. Se houver Nginx ou Apache na frente, faça proxy de todo o tráfego para a porta do Node e **use HTTPS**: no Basic Auth a senha viaja só codificada, não criptografada.
+**Na Hostinger (Node.js web app)**, o projeto é detectado como Vite e publicado só como site estático, sem o servidor (e `/report` dá 404). Nas configurações de build, escolha o framework **Express** (ou **Other**) e o **Entry file** `server/index.js`, com saída em `dist`. Como a Hostinger apaga os arquivos a cada deploy, cadastre as variáveis no painel em vez do `.env.local`: os `VITE_FIREBASE_*`, `REPORT_USER`, `REPORT_PASSWORD`, `FIREBASE_SERVICE_ACCOUNT` com **o conteúdo JSON da chave** (numa linha só) e, para os relatórios sobreviverem aos deploys, `REPORTS_DIR` apontando para fora de `hbuilds/` (ex.: `/home/USUARIO/domains/afluentes.online/reports`).
+
+Em outros servidores, precisam estar o `.env.local` (com `VITE_FIREBASE_PROJECT_ID`, `REPORT_USER` e `REPORT_PASSWORD`) e a chave de conta de serviço. Os relatórios ficam em `reports/` (ou em `REPORTS_DIR`). Para as datas saírem no horário de Brasília, defina `TZ=America/Sao_Paulo`. Se houver Nginx ou Apache na frente, faça proxy de todo o tráfego para a porta do Node e **use HTTPS**: no Basic Auth a senha viaja só codificada, não criptografada.
 
 > A chave de serviço dá acesso total ao projeto. Nunca a coloque no repositório nem a compartilhe.

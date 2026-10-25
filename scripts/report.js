@@ -42,6 +42,16 @@ if (!projectId) {
 }
 
 function credential() {
+  // Em hospedagens sem arquivos persistentes (Hostinger), a chave vai inteira na variável
+  const inline = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (inline?.startsWith("{")) {
+    try {
+      return cert(JSON.parse(inline));
+    } catch (err) {
+      console.error(`FIREBASE_SERVICE_ACCOUNT não é um JSON válido: ${err.message}`);
+      process.exit(1);
+    }
+  }
   const keyFile =
     process.env.FIREBASE_SERVICE_ACCOUNT ||
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
@@ -168,7 +178,8 @@ const html = template.replace(dataBlock, (_, open, close) => `${open}\n${json}\n
 
 // Data e hora locais no nome do arquivo (sv-SE formata como "2026-10-16 17:09")
 const stamp = generatedAt.toLocaleString("sv-SE").slice(0, 16).replace(/[ :]/g, "-");
-const file = `reports/relatorio-${stamp}.html`;
-await mkdir("reports", { recursive: true });
+const reportsDir = process.env.REPORTS_DIR || "reports";
+const file = join(reportsDir, `relatorio-${stamp}.html`);
+await mkdir(reportsDir, { recursive: true });
 await writeFile(file, html);
 console.log(`Relatório salvo em ${file} (${plays.length} partidas)`);

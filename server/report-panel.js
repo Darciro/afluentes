@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 const REPORT_FILE = /^relatorio-.*\.html$/;
 const RUN_TIMEOUT_MS = 2 * 60 * 1000;
@@ -22,7 +22,7 @@ const formatDate = (d) => d.toLocaleString("pt-BR", { dateStyle: "short", timeSt
  * Outras rotas seguem para next().
  */
 export function createReportHandler({ user, password, root }) {
-  const reportsDir = join(root, "reports");
+  const reportsDir = resolve(root, process.env.REPORTS_DIR || "reports");
   let running = null;
   let lastRun = null;
 
