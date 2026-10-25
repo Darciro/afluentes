@@ -75,6 +75,8 @@ O Firestore bloqueia leitura pelo app, então o relatório precisa de uma chave 
   2. Salve o .json na raiz do projeto (o nome padrão *-firebase-adminsdk-*.json
      já está no .gitignore) ou aponte para ele no .env.local:
      FIREBASE_SERVICE_ACCOUNT=caminho/da/chave.json
+     Na Hostinger, cadastre FIREBASE_SERVICE_ACCOUNT nas variáveis de ambiente
+     com o conteúdo JSON da chave, numa linha só
   3. Rode npm run report de novo`);
   process.exit(1);
 }
