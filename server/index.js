@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createReadStream, existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -26,9 +27,19 @@ const MIME = {
   ".mp4": "video/mp4",
 };
 
+// O preset Express da Hostinger não tem etapa de build: o dist/ é gerado na primeira inicialização
 if (!existsSync(join(DIST, "index.html"))) {
-  console.error("dist/ não encontrado. Rode npm run build antes de npm start.");
-  process.exit(1);
+  const vite = join(ROOT, "node_modules/vite/bin/vite.js");
+  if (!existsSync(vite)) {
+    console.error("dist/ não encontrado e o Vite não está instalado. Rode npm install e npm run build.");
+    process.exit(1);
+  }
+  console.log("dist/ não encontrado, gerando com vite build…");
+  const { status } = spawnSync(process.execPath, [vite, "build"], { cwd: ROOT, stdio: "inherit" });
+  if (status !== 0 || !existsSync(join(DIST, "index.html"))) {
+    console.error("Falha no vite build.");
+    process.exit(1);
+  }
 }
 if (!process.env.REPORT_USER || !process.env.REPORT_PASSWORD) {
   console.warn("REPORT_USER e REPORT_PASSWORD não definidos: /report ficará desativado.");
