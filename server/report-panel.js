@@ -4,7 +4,8 @@ import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-const REPORT_FILE = /^relatorio-.*\.html$/;
+// Sem "/" nem "..": o nome vem da URL e vira caminho dentro de reports/
+const REPORT_FILE = /^relatorio-[\w-]+\.html$/;
 const RUN_TIMEOUT_MS = 2 * 60 * 1000;
 
 const sha256 = (s) => createHash("sha256").update(s).digest();
@@ -23,7 +24,7 @@ const formatDate = (d) => d.toLocaleString("pt-BR", { dateStyle: "short", timeSt
 
 /**
  * Middleware (estilo Connect) da área /report: gera relatórios com scripts/report.js
- * e baixa o mais recente. Tudo nela exige usuário e senha (HTTP Basic Auth).
+ * e lista todos, que abrem em /report/<nome>.html. Tudo nela exige usuário e senha (HTTP Basic Auth).
  * Outras rotas seguem para next().
  */
 export function createReportHandler({ user, password, root }) {
@@ -31,26 +32,30 @@ export function createReportHandler({ user, password, root }) {
   let running = null;
   let lastRun = null;
 
-  async function latestReport() {
-    const names = (await readdir(reportsDir).catch(() => [])).filter((f) => REPORT_FILE.test(f));
-    // O nome traz data e hora (AAAA-MM-DD-HH-mm), então a ordem alfabética é a cronológica
-    const name = names.sort().at(-1);
-    if (!name) return null;
+  async function report(name) {
+    if (!REPORT_FILE.test(name)) return null;
     const path = join(reportsDir, name);
-    const { size, mtime } = await stat(path);
-    return { name, path, size, mtime };
+    const info = await stat(path).catch(() => null);
+    return info?.isFile() ? { name, path, size: info.size, mtime: info.mtime } : null;
+  }
+
+  async function listReports() {
+    const names = (await readdir(reportsDir).catch(() => [])).filter((f) => REPORT_FILE.test(f));
+    // O nome traz data e hora (AAAA-MM-DD-HH-mm), então a ordem alfabética invertida é a do mais novo ao mais antigo
+    const reports = await Promise.all(names.sort().reverse().map(report));
+    return reports.filter(Boolean);
   }
 
   /**
    * O relatório com um script que o converte em PDF e baixa sozinho. O PDF sai sempre
    * no tema claro, então as cores claras do :root também valem no modo escuro.
    */
-  async function renderPdfSource(res, latest) {
-    const html = await readFile(latest.path, "utf8");
+  async function renderPdfSource(res, found) {
+    const html = await readFile(found.path, "utf8");
     const lightRoot = html.match(/:root\s*\{[^}]*\}/)?.[0] ?? "";
     const options = {
       margin: [10, 0, 10, 0],
-      filename: latest.name.replace(/\.html$/, ".pdf"),
+      filename: found.name.replace(/\.html$/, ".pdf"),
       image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -133,23 +138,31 @@ export function createReportHandler({ user, password, root }) {
   }
 
   async function renderPage(res) {
-    const latest = await latestReport();
-    const info = latest
-      ? `<p class="info">Último relatório: <strong>${escapeHtml(latest.name)}</strong><br>
-         Gerado em ${formatDate(latest.mtime)} · ${Math.round(latest.size / 1024)} KB</p>`
-      : `<p class="info">Nenhum relatório gerado ainda.</p>`;
+    const reports = await listReports();
     const status = lastRun
       ? `<div class="status ${lastRun.ok ? "ok" : "erro"}">
-           <strong>${lastRun.ok ? "Relatório gerado" : "Falha ao gerar o relatório"}</strong> · ${formatDate(lastRun.at)}
+           <p class="k"><span class="dot" aria-hidden="true"></span>${lastRun.ok ? "Relatório gerado" : "Falha ao gerar o relatório"}</p>
+           <p class="d">${formatDate(lastRun.at)}</p>
            ${lastRun.output ? `<pre>${escapeHtml(lastRun.output)}</pre>` : ""}
          </div>`
       : "";
-    const download = latest
-      ? `<a class="btn secundario" href="/report/download">Baixar último relatório</a>`
-      : `<span class="btn secundario desativado" aria-disabled="true">Baixar último relatório</span>`;
-    const downloadPdf = latest
-      ? `<button class="btn secundario" type="button" id="pdf">Baixar em PDF</button>`
-      : `<span class="btn secundario desativado" aria-disabled="true">Baixar em PDF</span>`;
+    const list = reports.length
+      ? `<ul class="lista">${reports
+          .map((r) => {
+            const href = `/report/${encodeURIComponent(r.name)}`;
+            return `<li>
+              <div class="item">
+                <a class="nome" href="${href}">${escapeHtml(r.name)}</a>
+                <span class="data">${formatDate(r.mtime)} · ${Math.round(r.size / 1024)} KB</span>
+              </div>
+              <span class="baixar">
+                <a class="btn secundario pequeno" href="${href}?download">HTML</a>
+                <button class="btn secundario pequeno" type="button" data-pdf="${href}?pdf">PDF</button>
+              </span>
+            </li>`;
+          })
+          .join("")}</ul>`
+      : `<p class="info">Nenhum relatório gerado ainda.</p>`;
 
     send(
       res,
@@ -161,59 +174,126 @@ export function createReportHandler({ user, password, root }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Relatórios · Afluentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Fira+Sans:wght@400;500;600;800&display=swap">
 <style>
-  :root { --bg: #FBF9EC; --card: #FFFFFF; --ink: #1A1612; --muted: #6E655A; --line: #E7E2CF;
-          --blue: #0A6FB0; --ok: #23843A; --bad: #C41A34; }
+  /* Mesmos tokens, fontes e padrões visuais dos relatórios gerados por scripts/report.js */
+  :root {
+    --bg: #FBF9EC; --card: #FFFFFF; --ink: #1A1612; --ink-2: #4A4238; --muted: #6E655A;
+    --line: #E7E2CF; --grid: #EEEADB;
+    --blue: #0A6FB0; --ok: #23843A; --bad: #C41A34;
+    --display: 'Bangers', Impact, 'Arial Narrow', sans-serif;
+    --body: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #15110E; --card: #1F1A16; --ink: #F3EFE4; --muted: #A69C8D; --line: #342C25;
-            --blue: #5AAEE8; --ok: #5CC173; --bad: #F0607A; }
+    :root {
+      --bg: #15110E; --card: #1F1A16; --ink: #F3EFE4; --ink-2: #CFC7B8; --muted: #A69C8D;
+      --line: #342C25; --grid: #2A231D;
+      --blue: #5AAEE8; --ok: #5CC173; --bad: #F0607A;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, sans-serif; }
-  main { max-width: 560px; margin: 0 auto; padding: 48px 16px; }
-  h1 { margin: 0 0 4px; font-size: 26px; }
-  .info { color: var(--muted); margin: 0 0 24px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
-  .acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+  .stripe { height: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M0 14 L7 2 L14 14 Z' fill='%23E4223F'/%3E%3Cpath d='M14 0 L21 12 L28 0 Z' fill='%23E4223F'/%3E%3C/svg%3E"); background-size: 28px 14px; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+  h1 { margin: 4px 0 0; font-family: var(--display); font-weight: 400; font-size: clamp(34px, 6vw, 48px); line-height: 1; letter-spacing: .01em; }
+  .meta { margin: 0; color: var(--muted); font-size: 14px; text-align: right; }
+  .meta strong { color: var(--ink-2); font-weight: 600; }
+  @media (max-width: 640px) { .meta { text-align: left; } }
+
+  .summary { margin: 28px 0 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .summary h2 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  .summary .info { margin-bottom: 16px; }
+  .info { color: var(--ink-2); margin: 0; }
+
+  section.block { margin-top: 40px; }
+  .block-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 12px; }
+  .block-head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .block-head p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+
   form { margin: 0; }
-  .btn { display: inline-block; border: 0; border-radius: 8px; padding: 12px 20px; font: inherit; font-weight: 600;
-         text-decoration: none; cursor: pointer; background: var(--blue); color: #fff; }
-  .btn.secundario { background: transparent; color: var(--blue); box-shadow: inset 0 0 0 2px var(--blue); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 99px; padding: 12px 24px;
+         font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; background: var(--blue); color: #fff; }
+  .btn.secundario { background: transparent; color: var(--blue); box-shadow: inset 0 0 0 1px currentColor; }
+  .btn.secundario:hover { background: var(--grid); }
+  .btn.pequeno { padding: 2px 12px; font-size: 13px; min-height: 28px; }
   .btn:disabled, .btn.desativado { opacity: .5; cursor: default; }
-  .status { margin-top: 24px; padding: 12px 16px; border-radius: 8px; border-left: 4px solid; }
-  .status.ok { border-color: var(--ok); }
-  .status.erro { border-color: var(--bad); }
-  pre { margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 13px; color: var(--muted); }
+
+  .status { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .status p { margin: 0; }
+  .status .k { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 6px; }
+  .status .d { font-size: 13px; color: var(--muted); }
+  .status.ok .k { color: var(--ok); }
+  .status.erro .k { color: var(--bad); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; background: currentColor; }
+
+  .lista { margin: 0; padding: 0; list-style: none; }
+  .lista li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .lista li:first-child { border-top: 0; padding-top: 0; }
+  .lista li:last-child { padding-bottom: 0; }
+  .item { display: flex; flex-direction: column; min-width: 0; }
+  .nome { color: var(--ink); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+  .nome:hover { color: var(--blue); text-decoration: underline; }
+  .data { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .baixar { display: flex; gap: 8px; }
+  pre { margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; color: var(--muted); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  footer p { margin: 4px 0; }
 </style>
 </head>
 <body>
+<div class="stripe" aria-hidden="true"></div>
 <main>
-  <h1>Relatórios</h1>
-  ${info}
-  <div class="card">
-    <div class="acoes">
-      <form method="post" action="/report/gerar"
-            onsubmit="const b = this.querySelector('button'); b.disabled = true; b.textContent = 'Gerando…';">
-        <button class="btn" type="submit">Gerar novo relatório</button>
-      </form>
-      ${download}
-      ${downloadPdf}
+  <header>
+    <div>
+      <p class="eyebrow">Afluentes · Área restrita</p>
+      <h1>Relatórios de uso</h1>
     </div>
+    <p class="meta"><strong>${reports.length}</strong> ${reports.length === 1 ? "relatório gerado" : "relatórios gerados"}</p>
+  </header>
+
+  <section class="summary" aria-labelledby="h-novo">
+    <h2 id="h-novo">Novo relatório</h2>
+    <p class="info">Consolida as partidas registradas até agora num novo arquivo HTML.</p>
+    <form method="post" action="/report/gerar"
+          onsubmit="const b = this.querySelector('button'); b.disabled = true; b.textContent = 'Gerando…';">
+      <button class="btn" type="submit">Gerar novo relatório</button>
+    </form>
     ${status}
-  </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-lista">
+    <div class="block-head">
+      <h2 id="h-lista">Relatórios gerados</h2>
+      <p>Do mais novo ao mais antigo</p>
+    </div>
+    <div class="card">${list}</div>
+  </section>
+
+  <footer>
+    <p>Cada relatório abre no navegador; use <strong>HTML</strong> para baixar o arquivo ou <strong>PDF</strong> para gerar a versão em folha A4.</p>
+  </footer>
 </main>
 <script>
   // O relatório é montado no navegador (gráficos, fontes), então o PDF também: ele carrega
   // num iframe fora da tela, que gera o arquivo, baixa e avisa aqui quando termina
-  document.getElementById("pdf")?.addEventListener("click", (e) => {
-    const b = e.currentTarget;
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pdf]");
+    if (!b || b.disabled) return;
     const frame = document.createElement("iframe");
     const finish = (erro) => {
       clearTimeout(timer);
       removeEventListener("message", onMessage);
       frame.remove();
       b.disabled = false;
-      b.textContent = "Baixar em PDF";
+      b.textContent = "PDF";
       if (erro) alert("Não foi possível gerar o PDF: " + erro);
     };
     const onMessage = (m) => {
@@ -222,9 +302,9 @@ export function createReportHandler({ user, password, root }) {
     const timer = setTimeout(() => finish("tempo esgotado"), 60000);
     addEventListener("message", onMessage);
     b.disabled = true;
-    b.textContent = "Gerando PDF…";
+    b.textContent = "Gerando…";
     frame.style.cssText = "position:fixed;left:-10000px;top:0;width:800px;height:800px;border:0";
-    frame.src = "/report/pdf";
+    frame.src = b.dataset.pdf;
     document.body.append(frame);
   });
 </script>
@@ -260,22 +340,19 @@ export function createReportHandler({ user, password, root }) {
         return send(res, 303, "", { Location: "/report" });
       }
 
-      if (req.method === "GET" && pathname === "/report/download") {
-        const latest = await latestReport();
-        if (!latest) return send(res, 404, "Nenhum relatório gerado ainda.");
+      if (req.method === "GET") {
+        const found = await report(pathname.slice("/report/".length));
+        if (!found) return send(res, 404, "Relatório não encontrado.");
+        const { searchParams } = new URL(req.url, "http://localhost");
+        if (searchParams.has("pdf")) return await renderPdfSource(res, found);
         res.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
-          "Content-Length": latest.size,
-          "Content-Disposition": `attachment; filename="${latest.name}"`,
+          "Content-Length": found.size,
+          // ?download baixa o arquivo; sem ele o relatório abre no navegador
+          ...(searchParams.has("download") && { "Content-Disposition": `attachment; filename="${found.name}"` }),
           "Cache-Control": "no-store",
         });
-        return createReadStream(latest.path).pipe(res);
-      }
-
-      if (req.method === "GET" && pathname === "/report/pdf") {
-        const latest = await latestReport();
-        if (!latest) return send(res, 404, "Nenhum relatório gerado ainda.");
-        return await renderPdfSource(res, latest);
+        return createReadStream(found.path).pipe(res);
       }
 
       send(res, 404, "Não encontrado.");
