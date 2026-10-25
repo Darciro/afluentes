@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       // Atualiza o service worker sozinho quando houver build novo
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon/favicon.svg', 'favicon/favicon.ico', 'favicon/apple-touch-icon.png'],
       manifest: {
         name: 'Afluentes — Guardião da Amazônia',
         short_name: 'Afluentes',
@@ -39,8 +39,9 @@ export default defineConfig(({ mode }) => ({
         background_color: '#1A1410',
         theme_color: '#1A1410',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/favicon/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/favicon/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/favicon/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
       workbox: {

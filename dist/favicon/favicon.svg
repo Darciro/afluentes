@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Afluentes</title>
+  <defs>
+    <!-- A estilizado (serifa "toscana" do logotipo, simplificada) -->
+    <path id="a" fill-rule="evenodd" d="M88 448 L184 112 L160 112 L168 64 L344 64 L352 112 L328 112 L424 448 L448 448 L440 472 L304 472 L312 448 L334 448 L314 376 L198 376 L178 448 L200 448 L208 472 L72 472 L64 448 Z M218 304 L294 304 L256 168 Z"/>
+    <!-- extrusão: faixas verde / laranja / vermelho como na pintura do logo -->
+    <linearGradient id="shade" gradientUnits="userSpaceOnUse" x1="0" y1="64" x2="0" y2="500">
+      <stop offset="0" stop-color="#3E9A4A"/>
+      <stop offset=".42" stop-color="#3E9A4A"/>
+      <stop offset=".42" stop-color="#EE9A45"/>
+      <stop offset=".72" stop-color="#EE9A45"/>
+      <stop offset=".72" stop-color="#D9364A"/>
+      <stop offset="1" stop-color="#D9364A"/>
+    </linearGradient>
+    <linearGradient id="face" gradientUnits="userSpaceOnUse" x1="0" y1="64" x2="0" y2="472">
+      <stop offset="0" stop-color="#1A92C9"/>
+      <stop offset=".55" stop-color="#1A92C9"/>
+      <stop offset=".55" stop-color="#0E68AA"/>
+      <stop offset="1" stop-color="#0E68AA"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="#FEFDE9"/>
+
+  <g transform="translate(30 -14) scale(0.92) translate(22 22)">
+    <!-- contorno branco de todo o bloco -->
+    <g stroke="#FFFFFF" stroke-width="22" stroke-linejoin="round" fill="#FFFFFF">
+      <use href="#a" transform="translate(-40 34)"/>
+      <use href="#a"/>
+    </g>
+    <!-- extrusão (cópias em degraus até a face) -->
+    <g fill="url(#shade)">
+      <use href="#a" transform="translate(-40 34)"/>
+      <use href="#a" transform="translate(-39 33.15)"/>
+      <use href="#a" transform="translate(-38 32.3)"/>
+      <use href="#a" transform="translate(-37 31.45)"/>
+      <use href="#a" transform="translate(-36 30.6)"/>
+      <use href="#a" transform="translate(-35 29.75)"/>
+      <use href="#a" transform="translate(-34 28.9)"/>
+      <use href="#a" transform="translate(-33 28.05)"/>
+      <use href="#a" transform="translate(-32 27.2)"/>
+      <use href="#a" transform="translate(-31 26.35)"/>
+      <use href="#a" transform="translate(-30 25.5)"/>
+      <use href="#a" transform="translate(-29 24.65)"/>
+      <use href="#a" transform="translate(-28 23.8)"/>
+      <use href="#a" transform="translate(-27 22.95)"/>
+      <use href="#a" transform="translate(-26 22.1)"/>
+      <use href="#a" transform="translate(-25 21.25)"/>
+      <use href="#a" transform="translate(-24 20.4)"/>
+      <use href="#a" transform="translate(-23 19.55)"/>
+      <use href="#a" transform="translate(-22 18.7)"/>
+      <use href="#a" transform="translate(-21 17.85)"/>
+      <use href="#a" transform="translate(-20 17)"/>
+      <use href="#a" transform="translate(-19 16.15)"/>
+      <use href="#a" transform="translate(-18 15.3)"/>
+      <use href="#a" transform="translate(-17 14.45)"/>
+      <use href="#a" transform="translate(-16 13.6)"/>
+      <use href="#a" transform="translate(-15 12.75)"/>
+      <use href="#a" transform="translate(-14 11.9)"/>
+      <use href="#a" transform="translate(-13 11.05)"/>
+      <use href="#a" transform="translate(-12 10.2)"/>
+      <use href="#a" transform="translate(-11 9.35)"/>
+      <use href="#a" transform="translate(-10 8.5)"/>
+      <use href="#a" transform="translate(-9 7.65)"/>
+      <use href="#a" transform="translate(-8 6.8)"/>
+      <use href="#a" transform="translate(-7 5.95)"/>
+      <use href="#a" transform="translate(-6 5.1)"/>
+      <use href="#a" transform="translate(-5 4.25)"/>
+      <use href="#a" transform="translate(-4 3.4)"/>
+      <use href="#a" transform="translate(-3 2.55)"/>
+      <use href="#a" transform="translate(-2 1.7)"/>
+      <use href="#a" transform="translate(-1 0.85)"/>
+    </g>
+    <!-- face do A -->
+    <use href="#a" fill="url(#face)" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  </g>
+</svg>

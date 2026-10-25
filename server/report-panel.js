@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const REPORT_FILE = /^relatorio-.*\.html$/;
@@ -13,6 +13,11 @@ const sameSecret = (a, b) => timingSafeEqual(sha256(a), sha256(b));
 
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+const HTML2PDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+// Blocos que não podem ser cortados na virada de página. Ficam de fora os itens de grade
+// (.kpi, .tier…): o html2pdf quebra a página inserindo um espaçador antes, e ele viraria uma célula
+const PDF_AVOID_BREAK = ["header", ".summary", ".kpis", "section.block", ".block-head", ".tiers", ".callouts", ".card", "tr"];
 
 const formatDate = (d) => d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -34,6 +39,63 @@ export function createReportHandler({ user, password, root }) {
     const path = join(reportsDir, name);
     const { size, mtime } = await stat(path);
     return { name, path, size, mtime };
+  }
+
+  /**
+   * O relatório com um script que o converte em PDF e baixa sozinho. O PDF sai sempre
+   * no tema claro, então as cores claras do :root também valem no modo escuro.
+   */
+  async function renderPdfSource(res, latest) {
+    const html = await readFile(latest.path, "utf8");
+    const lightRoot = html.match(/:root\s*\{[^}]*\}/)?.[0] ?? "";
+    const options = {
+      margin: [10, 0, 10, 0],
+      filename: latest.name.replace(/\.html$/, ".pdf"),
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css"], avoid: PDF_AVOID_BREAK },
+    };
+    const inject = `<style>
+  @media (prefers-color-scheme: dark) { ${lightRoot} }
+  /* Largura da folha A4: os gráficos são desenhados já no tamanho em que vão para o PDF */
+  body { background: #fff; width: 210mm; }
+  details.data { display: none; }
+  /* Sem rolagem lateral no papel: a coluna Resultado quebra o texto para a tabela caber na folha */
+  th, td { padding: 8px 10px; font-size: 13px; }
+  #tUlt td:nth-child(4) { white-space: normal; }
+</style>
+<script src="${HTML2PDF_URL}"></script>
+<script>
+  // Sem animação os gráficos já estão completos quando a página é capturada
+  if (window.Chart) Object.assign(Chart.defaults, { animation: false, devicePixelRatio: 2 });
+  addEventListener("load", async () => {
+    const done = (ok, erro) => parent !== window && parent.postMessage({ tipo: "relatorio-pdf", ok, erro }, location.origin);
+    try {
+      await document.fonts.ready;
+      // O html2canvas sobrepõe palavras quando um texto quebra de linha; com uma palavra
+      // por <span>, cada uma é desenhada na própria caixa
+      const walker = document.createTreeWalker(document.querySelector("main"), NodeFilter.SHOW_TEXT);
+      const textos = [];
+      while (walker.nextNode()) if (/\\S\\s+\\S/.test(walker.currentNode.data)) textos.push(walker.currentNode);
+      for (const t of textos) {
+        const spans = t.data.split(/(\\s+)/).map((p) => {
+          if (!p.trim()) return p;
+          const s = document.createElement("span");
+          s.textContent = p;
+          return s;
+        });
+        t.replaceWith(...spans);
+      }
+      await html2pdf().set(${JSON.stringify(options).replace(/</g, "\\u003c")}).from(document.body).save();
+      done(true);
+    } catch (err) {
+      done(false, String(err));
+    }
+  });
+</script>
+</head>`;
+    send(res, 200, html.replace("</head>", () => inject), { "Content-Type": "text/html; charset=utf-8" });
   }
 
   function runReport() {
@@ -85,6 +147,9 @@ export function createReportHandler({ user, password, root }) {
     const download = latest
       ? `<a class="btn secundario" href="/report/download">Baixar último relatório</a>`
       : `<span class="btn secundario desativado" aria-disabled="true">Baixar último relatório</span>`;
+    const downloadPdf = latest
+      ? `<button class="btn secundario" type="button" id="pdf">Baixar em PDF</button>`
+      : `<span class="btn secundario desativado" aria-disabled="true">Baixar em PDF</span>`;
 
     send(
       res,
@@ -132,10 +197,37 @@ export function createReportHandler({ user, password, root }) {
         <button class="btn" type="submit">Gerar novo relatório</button>
       </form>
       ${download}
+      ${downloadPdf}
     </div>
     ${status}
   </div>
 </main>
+<script>
+  // O relatório é montado no navegador (gráficos, fontes), então o PDF também: ele carrega
+  // num iframe fora da tela, que gera o arquivo, baixa e avisa aqui quando termina
+  document.getElementById("pdf")?.addEventListener("click", (e) => {
+    const b = e.currentTarget;
+    const frame = document.createElement("iframe");
+    const finish = (erro) => {
+      clearTimeout(timer);
+      removeEventListener("message", onMessage);
+      frame.remove();
+      b.disabled = false;
+      b.textContent = "Baixar em PDF";
+      if (erro) alert("Não foi possível gerar o PDF: " + erro);
+    };
+    const onMessage = (m) => {
+      if (m.source === frame.contentWindow && m.data?.tipo === "relatorio-pdf") finish(m.data.ok ? null : m.data.erro);
+    };
+    const timer = setTimeout(() => finish("tempo esgotado"), 60000);
+    addEventListener("message", onMessage);
+    b.disabled = true;
+    b.textContent = "Gerando PDF…";
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:800px;height:800px;border:0";
+    frame.src = "/report/pdf";
+    document.body.append(frame);
+  });
+</script>
 </body>
 </html>`,
       { "Content-Type": "text/html; charset=utf-8" },
@@ -178,6 +270,12 @@ export function createReportHandler({ user, password, root }) {
           "Cache-Control": "no-store",
         });
         return createReadStream(latest.path).pipe(res);
+      }
+
+      if (req.method === "GET" && pathname === "/report/pdf") {
+        const latest = await latestReport();
+        if (!latest) return send(res, 404, "Nenhum relatório gerado ainda.");
+        return await renderPdfSource(res, latest);
       }
 
       send(res, 404, "Não encontrado.");
