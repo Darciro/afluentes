@@ -21,6 +21,7 @@ O app abre em http://localhost:5173. Sem o `.env.local` ele funciona normalmente
 | `npm run preview` | Serve o `dist/` localmente, útil para testar o PWA e offline |
 | `npm run lint`    | Verifica o código com oxlint                                |
 | `npm run report`  | Gera um relatório HTML com as partidas salvas no Firestore  |
+| `npm start`       | Servidor de produção: serve o `dist/` e a área `/report`     |
 
 ### Conteúdo do quiz
 
@@ -97,5 +98,28 @@ FIREBASE_SERVICE_ACCOUNT=/caminho/da/chave.json
 ```
 
 O script procura a credencial nesta ordem: `FIREBASE_SERVICE_ACCOUNT`, `GOOGLE_APPLICATION_CREDENTIALS`, um `*-firebase-adminsdk-*.json` na raiz e, por fim, o login do `gcloud auth application-default login`. O projeto lido é o de `VITE_FIREBASE_PROJECT_ID`.
+
+### Área /report (navegador)
+
+Em `/report` há uma página para **gerar um novo relatório** (roda o mesmo `scripts/report.js`) e **baixar o último gerado**. Ela é protegida por usuário e senha (HTTP Basic Auth), definidos no `.env.local`:
+
+```sh
+REPORT_USER=...
+REPORT_PASSWORD=...
+```
+
+Sem essas variáveis, `/report` responde 503. A área funciona no `npm run dev`, no `npm run preview` e em produção.
+
+### Produção
+
+Em produção o app roda com o servidor Node em [server/index.js](server/index.js), sem dependências extras:
+
+```sh
+npm ci
+npm run build
+npm start          # porta 3000 por padrão (PORT=...)
+```
+
+No servidor precisam estar o `.env.local` (com `VITE_FIREBASE_PROJECT_ID`, `REPORT_USER` e `REPORT_PASSWORD`) e a chave de conta de serviço. Os relatórios ficam em `reports/`. Para as datas saírem no horário de Brasília, defina `TZ=America/Sao_Paulo`. Se houver Nginx ou Apache na frente, faça proxy de todo o tráfego para a porta do Node e **use HTTPS**: no Basic Auth a senha viaja só codificada, não criptografada.
 
 > A chave de serviço dá acesso total ao projeto. Nunca a coloque no repositório nem a compartilhe.

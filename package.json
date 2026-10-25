@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "start": "node --env-file-if-exists=.env.local server/index.js",
     "report": "node --env-file-if-exists=.env.local scripts/report.js"
   },
   "dependencies": {

@@ -1,13 +1,25 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { createReportHandler } from './server/report-panel.js'
 
 const ONE_YEAR = 60 * 60 * 24 * 365
 
+// Área /report (gerar e baixar relatórios) também no npm run dev e no npm run preview
+function reportPanel(env) {
+  const handler = createReportHandler({ user: env.REPORT_USER, password: env.REPORT_PASSWORD, root: process.cwd() })
+  return {
+    name: 'report-panel',
+    configureServer: (server) => void server.middlewares.use(handler),
+    configurePreviewServer: (server) => void server.middlewares.use(handler),
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
+    reportPanel(loadEnv(mode, process.cwd(), 'REPORT_')),
     react(),
     tailwindcss(),
     VitePWA({
@@ -34,6 +46,8 @@ export default defineConfig({
       workbox: {
         // App shell (JS, CSS, HTML e imagens do bundle) fica disponível offline
         globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,woff2}'],
+        // /report é servido pelo servidor Node; sem isso o service worker responderia com o app
+        navigateFallbackDenylist: [/^\/report/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
@@ -73,4 +87,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))
