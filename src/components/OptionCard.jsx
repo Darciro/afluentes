@@ -1,4 +1,4 @@
-import { useLang } from "../i18n/useLang";
+import { UI } from "../data/strings";
 import { FOCUS } from "../styles/classes";
 import { CheckIcon, XIcon } from "./icons";
 
@@ -15,14 +15,13 @@ const MEDIA_STATE_CLASS = {
  * @param {"idle" | "correct" | "wrong" | "muted"} state
  */
 export default function OptionCard({ option, letter, delay, state, onClick }) {
-  const { t, tx } = useLang();
   const idle = state === "idle";
   const faded = state === "wrong" || state === "muted";
   const isImage = option.kind === "image";
   const contain = isImage && option.fit === "contain";
-  const caption = isImage ? tx(option.caption) : undefined;
-  const name = caption ?? tx(option.alt) ?? option.text;
-  const suffix = state === "correct" ? ` — ${t.isCorrect}` : state === "wrong" ? ` — ${t.yourAnswer}` : "";
+  const caption = option.caption;
+  const name = caption ?? option.alt ?? option.text;
+  const suffix = state === "correct" ? ` — ${UI.isCorrect}` : state === "wrong" ? ` — ${UI.yourAnswer}` : "";
 
   return (
     <button

@@ -27,10 +27,10 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon/favicon.svg', 'favicon/favicon.ico', 'favicon/apple-touch-icon.png'],
       manifest: {
-        name: 'Afluentes — Guardião da Amazônia',
+        name: 'Afluentes — Bli en vokter av Amazonas',
         short_name: 'Afluentes',
-        description: 'Responda o quiz e veja se está preparado para ser um Guardião da Amazônia.',
-        lang: 'pt-BR',
+        description: 'Ta quizen og se om du er klar.',
+        lang: 'nb',
         start_url: '/',
         scope: '/',
         display: 'fullscreen',

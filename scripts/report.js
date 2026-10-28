@@ -28,7 +28,7 @@ const TITULOS = {
   noruegas: "Quantas Noruegas",
   arara: "Arara",
   acai: "Açaí",
-  castanha: "Castanha-do-Brasil",
+  apex: "Produtos (ApexBrasil)",
   povos: "Povos indígenas",
   babacu: "Babaçu",
   barcos: "Barcos",
@@ -119,8 +119,8 @@ const perguntas = Array.from({ length: totalQuestions }, (_, i) => {
 const faixas = RESULT_TIERS.toSorted((a, b) => a.min - b.min).map((t, i, arr) => ({
   min: t.min,
   max: i < arr.length - 1 ? arr[i + 1].min - 1 : totalQuestions,
-  titulo: t.title.pt,
-  mensagem: t.message.pt,
+  titulo: t.title,
+  mensagem: t.message,
 }));
 
 const distribuicaoPontuacao = Array.from(

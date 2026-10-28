@@ -1,5 +1,5 @@
 import { LETTERS } from "../data/questions";
-import { useLang } from "../i18n/useLang";
+import { UI } from "../data/strings";
 import { useFocusOnChange } from "../hooks/useFocusOnChange";
 import { FOCUS, SCREEN } from "../styles/classes";
 import { ArrowIcon } from "./icons";
@@ -14,7 +14,6 @@ function optionState(i, picked, correct) {
 }
 
 export default function QuestionScreen({ questions, index, question, picked, logoSrc, onChoose, onNext, tools }) {
-  const { t, tx } = useLang();
   const headingRef = useFocusOnChange(index);
   const total = questions.length;
   const revealed = picked !== null;
@@ -27,7 +26,7 @@ export default function QuestionScreen({ questions, index, question, picked, log
         <img className="-mb-1.5 block h-auto w-[170px]" src={logoSrc} alt="Afluentes" />
         <div className="flex w-full items-center justify-between">
           <span className="text-sm font-semibold text-gq-blue">
-            {t.counter(index + 1, total)}
+            {UI.counter(index + 1, total)}
           </span>
           {tools}
         </div>
@@ -41,10 +40,10 @@ export default function QuestionScreen({ questions, index, question, picked, log
           key={question.id}
           className="mt-1 mb-0 animate-gq-in text-[clamp(20px,5.9vw,26px)] leading-[1.22] font-extrabold text-pretty text-gq-blue focus:outline-none"
         >
-          {tx(question.prompt)}
+          {question.prompt}
         </h1>
 
-        <div className="mt-1 grid grid-cols-2 gap-3" role="group" aria-label={t.options}>
+        <div className="mt-1 grid grid-cols-2 gap-3" role="group" aria-label={UI.options}>
           {question.options.map((opt, i) => (
             <OptionCard
               key={`${question.id}-${i}`}
@@ -59,7 +58,7 @@ export default function QuestionScreen({ questions, index, question, picked, log
 
         <div className="mt-auto flex min-h-14 items-center justify-between gap-3" aria-live="polite">
           {!revealed ? (
-            <p className="mx-auto my-0 text-center text-sm text-[#4A4238]">{t.hint}</p>
+            <p className="mx-auto my-0 text-center text-sm text-[#4A4238]">{UI.hint}</p>
           ) : (
             <>
               <p
@@ -67,7 +66,7 @@ export default function QuestionScreen({ questions, index, question, picked, log
                   isRight ? "text-gq-green" : "text-gq-red-2"
                 }`}
               >
-                {isRight ? t.correct : t.wrong}
+                {isRight ? UI.correct : UI.wrong}
               </p>
               <button
                 type="button"
@@ -75,7 +74,7 @@ export default function QuestionScreen({ questions, index, question, picked, log
                 onClick={onNext}
                 autoFocus
               >
-                {index + 1 >= total ? t.seeResult : t.next} <ArrowIcon />
+                {index + 1 >= total ? UI.seeResult : UI.next} <ArrowIcon />
               </button>
             </>
           )}

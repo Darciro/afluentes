@@ -1,11 +1,10 @@
 import { RESULT_TIERS, isTopTier, tierFor } from "../data/questions";
-import { useLang } from "../i18n/useLang";
+import { UI } from "../data/strings";
 import { useFocusOnChange } from "../hooks/useFocusOnChange";
 import { CTA, GROW, SCREEN, STACK } from "../styles/classes";
 import { ReplayIcon } from "./icons";
 
 export default function ResultScreen({ score, total, answers, posterSrc, logoSrc, onRestart, tools }) {
-  const { t, tx } = useLang();
   const headingRef = useFocusOnChange();
   const tier = tierFor(score);
   const halo = isTopTier(score);
@@ -32,7 +31,7 @@ export default function ResultScreen({ score, total, answers, posterSrc, logoSrc
               : ""
           }`}
         >
-          <span className="text-sm font-semibold tracking-[.14em] text-white/85 uppercase">{t.scoreA}</span>
+          <span className="text-sm font-semibold tracking-[.14em] text-white/85 uppercase">{UI.scoreA}</span>
           <span
             className={`mt-1.5 animate-gq-pop-score font-display leading-[.9] font-normal tracking-[.01em] text-gq-gold ${
               halo ? "text-[96px]" : "text-[112px]"
@@ -44,7 +43,7 @@ export default function ResultScreen({ score, total, answers, posterSrc, logoSrc
         </div>
         <ol
           className="mx-0 mt-6 mb-0 grid w-full max-w-[280px] list-none grid-cols-10 gap-[5px] p-0"
-          aria-label={`${t.scoreA} ${t.scoreB(score, total)}`}
+          aria-label={`${UI.scoreA} ${UI.scoreB(score, total)}`}
         >
           {answers.map((ok, i) => (
             <li key={i} className={`h-2.5 ${ok ? "bg-[#34B24A]" : "bg-[#E4223F]"}`} />
@@ -58,14 +57,14 @@ export default function ResultScreen({ score, total, answers, posterSrc, logoSrc
             almost ? "text-[64px]" : "text-[clamp(34px,10.5vw,44px)]"
           }`}
         >
-          {tx(tier.title)}
+          {tier.title}
         </h1>
         <p className="mx-0 mt-4 mb-0 max-w-[320px] text-[17px] leading-[1.35] font-semibold text-pretty text-white/85">
-          {tx(tier.message)}
+          {tier.message}
         </p>
         <div className={GROW} />
         <button type="button" className={`${CTA} mt-0 text-[clamp(24px,7vw,30px)] whitespace-nowrap`} onClick={onRestart}>
-          <ReplayIcon /> {t.playAgain}
+          <ReplayIcon /> {UI.playAgain}
         </button>
       </div>
     </section>

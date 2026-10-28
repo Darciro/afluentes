@@ -1,9 +1,8 @@
-import { useLang } from "../i18n/useLang";
+import { UI } from "../data/strings";
 import { useFocusOnChange } from "../hooks/useFocusOnChange";
 import { CTA, GROW, SCREEN, STACK } from "../styles/classes";
 
 export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart, tools }) {
-  const { t } = useLang();
   const headingRef = useFocusOnChange();
 
   return (
@@ -23,9 +22,9 @@ export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart, too
         aria-hidden="true"
       />
       <div className={STACK}>
-        <div className="flex w-full items-center justify-between">{tools}</div>
+        <div className="flex w-full items-center justify-end">{tools}</div>
         <img className="mt-5 h-auto w-[min(280px,72%)]" src={logoSrc} alt="Afluentes" fetchPriority="high" />
-        <p className="mt-2 mb-0 text-[10px] tracking-[.18em] uppercase opacity-90" lang="nb">Sideelver – Amazonasfondets veier og historier</p>
+        <p className="mt-2 mb-0 text-[10px] tracking-[.18em] uppercase opacity-90">Sideelver – Amazonasfondets veier og historier</p>
         <div className={GROW} />
         <h1
           id="gq-start-title"
@@ -33,11 +32,11 @@ export default function StartScreen({ videoSrc, posterSrc, logoSrc, onStart, too
           tabIndex={-1}
           className="m-0 font-display text-[clamp(44px,13vw,60px)] leading-[.95] font-normal tracking-[.01em] text-balance focus:outline-none"
         >
-          {t.startTitle}
+          {UI.startTitle}
         </h1>
-        <p className="mt-3.5 mb-0 max-w-[300px] text-lg leading-[1.35]">{t.startSub}</p>
+        <p className="mt-3.5 mb-0 max-w-[300px] text-lg leading-[1.35]">{UI.startSub}</p>
         <button type="button" className={`${CTA} mt-8 text-[34px]`} onClick={onStart}>
-          {t.play}
+          {UI.play}
         </button>
       </div>
     </section>
