@@ -13,11 +13,17 @@ export const ASSETS = {
 /** Fotos das perguntas em /public/quiz-assets (pacote quiz-assets.zip). */
 const QUIZ_ASSETS = "/quiz-assets";
 
+/**
+ * O service worker guarda as fotos por URL por 1 ano (CacheFirst): ao trocar uma foto
+ * mantendo o nome do arquivo, aumente este número para os aparelhos baixarem a nova.
+ */
+const QUIZ_ASSETS_VERSION = 2;
+
 /*
  * Opções: foto ("cover"), mapa/bandeira ("contain", inteira, sem corte, com legenda opcional)
  * ou um número/texto grande. `alt` é o nome lido pelo leitor de tela; a legenda aparece na tela.
  */
-const img = (file, alt, extra = {}) => ({ kind: "image", src: `${QUIZ_ASSETS}/${file}`, alt, fit: "cover", ...extra });
+const img = (file, alt, extra = {}) => ({ kind: "image", src: `${QUIZ_ASSETS}/${file}?v=${QUIZ_ASSETS_VERSION}`, alt, fit: "cover", ...extra });
 const map = (file, alt) => img(file, alt, { fit: "contain" });
 const flag = (file, name) => img(file, name, { fit: "contain", caption: name });
 const num = (n) => ({ kind: "text", text: n, alt: n });
